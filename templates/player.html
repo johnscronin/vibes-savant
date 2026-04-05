@@ -250,7 +250,7 @@
             </div>
           </button>
         </div>
-        <div class="qualifier-context-note" id="hq-context-note" style="font-size:12px;font-family:var(--font-body,'IBM Plex Sans',sans-serif);font-style:italic;color:#9ca3af;margin-top:4px;">HQ Pitchers = Top 20% of Pitchers by WHIP &middot; HQ Batters = Top 20% of Batters by OPS</div>
+        <div id="hq-subnote" style="display:none;"><div class="qualifier-context-note" id="hq-context-note" style="font-size:12px;font-family:var(--font-body,'IBM Plex Sans',sans-serif);font-style:italic;color:#9ca3af;margin-top:4px;">HQ Pitchers = Top 20% of Pitchers by WHIP &middot; HQ Batters = Top 20% of Batters by OPS</div></div>
 
         <!-- Overall view: Batting + Pitching -->
         <div id="gauge-overall-wrap">
@@ -1337,6 +1337,8 @@ function setGaugeContext(ctx) {
   document.getElementById('gauge-btn-hq').classList.toggle('active', ctx==='hq');
   const sfx = document.getElementById('pct-context-suffix');
   if (sfx) sfx.textContent = ctx === 'hq' ? ' \u2014 vs High Quality Opponents' : '';
+  const hqSubnote = document.getElementById('hq-subnote');
+  if (hqSubnote) hqSubnote.style.display = ctx === 'hq' ? '' : 'none';
   _updateGaugeVis();
 }
 function _updateGaugeVis() {
@@ -1601,7 +1603,7 @@ async function loadTrend() {
     ...(hasLgAvg ? [{
       label: 'League Avg',
       data: lgAvgs,
-      borderColor: '#99c9ea',
+      borderColor: '#aaaaaa',
       borderDash: [6,4],
       borderWidth: 1.5,
       pointRadius: 0,
@@ -1613,7 +1615,7 @@ async function loadTrend() {
     ...(careerAvg != null ? [{
       label: 'Career Avg',
       data: labels.map(()=>careerAvg),
-      borderColor: '#aaaaaa',
+      borderColor: '#99c9ea',
       borderDash: [4,4],
       borderWidth: 1.5,
       pointRadius: 0,

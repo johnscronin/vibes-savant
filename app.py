@@ -745,6 +745,29 @@ def api_trend(name):
     return jsonify(data)
 
 
+# ── API: league average by stat across all seasons ───────────────────────────
+@app.route('/api/league_average/<stat>')
+def api_league_average(stat):
+    conn = get_db()
+    BATTING_COLS = {'avg', 'obp', 'slg', 'ops', 'hr', 'rbi', 'bb', 'so', 'r'}
+    PITCHING_COLS = {'era', 'whip', 'k'}
+    result = {}
+    if stat in BATTING_COLS:
+        rows = conn.execute(
+            f"SELECT season, ROUND(AVG({stat}),3) FROM league_batting_stats "
+            f"WHERE {stat} IS NOT NULL AND season < 2026 GROUP BY season ORDER BY season"
+        ).fetchall()
+        result = {r[0]: r[1] for r in rows}
+    elif stat in PITCHING_COLS:
+        rows = conn.execute(
+            f"SELECT season, ROUND(AVG({stat}),3) FROM league_pitching_stats "
+            f"WHERE {stat} IS NOT NULL AND season < 2026 GROUP BY season ORDER BY season"
+        ).fetchall()
+        result = {r[0]: r[1] for r in rows}
+    conn.close()
+    return jsonify(result)
+
+
 # ── API: splits data for player ──────────────────────────────────────────────
 @app.route('/api/player/<name>/splits')
 def api_splits(name):

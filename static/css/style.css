@@ -304,6 +304,10 @@ main { flex: 1; }
 .stats-table tfoot tr { background: var(--surface2); border-top: 2px solid var(--border); }
 .stats-table tfoot td { padding: 9px 12px; font-weight: 700; }
 
+/* Center all stat table columns; keep first column (label/year) left-aligned */
+.stats-table th, .stats-table td { text-align: center; }
+.stats-table td:first-child { text-align: left; }
+
 .vibes-row { background: rgba(153,201,234,0.06) !important; }
 
 /* Leader highlights */
