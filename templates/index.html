@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+{% block title %}Vibes Front Office Tool — Home{% endblock %}
+
+{% block head %}
+<style>
+/* ── Moneyball Hero ───────────────────────────────────────────────────────── */
+.moneyball-hero {
+  width: 100%;
+  background: #0a0a12;
+  overflow: hidden;
+  border-bottom: 2px solid #1a1a2e;
+}
+.moneyball-scene {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.moneyball-base-image {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/* Whiteboard overlay: percentages from pixel analysis of 1000x663 image
+   wb_left=310px=31%, wb_top=95px=14.3%, wb_right=850px=85%, wb_bottom=510px=77%
+   Final tuned values: left 32%, top 14%, width 54%, height 63% */
+.whiteboard-overlay {
+  position: absolute;
+  left: 32%;
+  top: 14%;
+  width: 54%;
+  height: 63%;
+  background: rgba(248, 246, 240, 0.93);
+  border: 1.5px solid rgba(180, 170, 150, 0.4);
+  padding: 6px 8px 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  filter: sepia(6%) brightness(101%);
+}
+.whiteboard-header {
+  text-align: center;
+  margin-bottom: 3px;
+  border-bottom: 2px solid #1a1a2e;
+  padding-bottom: 2px;
+}
+.whiteboard-title {
+  display: block;
+  font-family: 'Bebas Neue', var(--font-display), sans-serif;
+  font-size: clamp(7px, 1.35vw, 17px);
+  color: #1a1a2e;
+  letter-spacing: 1px;
+  line-height: 1.1;
+}
+.whiteboard-subtitle {
+  display: block;
+  font-family: 'IBM Plex Sans', var(--font-body), sans-serif;
+  font-size: clamp(5px, 0.85vw, 11px);
+  color: #555;
+  margin-top: 1px;
+}
+.whiteboard-table-container {
+  overflow: hidden;
+  height: calc(100% - 34px);
+}
+.whiteboard-leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'IBM Plex Mono', var(--mono), monospace;
+}
+.whiteboard-leaderboard thead tr {
+  background: #1a1a2e;
+}
+.whiteboard-leaderboard th {
+  font-family: 'Barlow Condensed', var(--font-heading), sans-serif;
+  font-size: clamp(5px, 0.82vw, 10px);
+  color: #fff;
+  padding: 2px 3px;
+  text-align: right;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.whiteboard-leaderboard th:nth-child(2) { text-align: left; }
+.whiteboard-leaderboard td {
+  font-size: clamp(4px, 0.75vw, 9.5px);
+  padding: 1px 3px;
+  text-align: right;
+  color: #1a1a2e;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  white-space: nowrap;
+}
+.whiteboard-leaderboard td:first-child {
+  color: #999;
+  font-size: clamp(3px, 0.62vw, 8px);
+  padding-right: 2px;
+}
+.whiteboard-leaderboard td:nth-child(2) {
+  text-align: left;
+  font-family: 'Barlow Condensed', var(--font-heading), sans-serif;
+  font-weight: 600;
+  font-size: clamp(5px, 0.82vw, 11px);
+}
+.whiteboard-leaderboard td:nth-child(3) {
+  color: #777;
+  font-size: clamp(3px, 0.62vw, 8px);
+}
+/* OPS column highlighted in brand pink */
+.whiteboard-leaderboard td:nth-child(4) {
+  color: #c0337a;
+  font-weight: 700;
+}
+.whiteboard-leaderboard tbody tr:nth-child(even) {
+  background: rgba(153, 201, 234, 0.07);
+}
+.whiteboard-leaderboard tbody tr:hover {
+  background: rgba(213, 83, 155, 0.07);
+  cursor: pointer;
+}
+/* Enter Front Office button */
+.playball-button-container {
+  position: absolute;
+  bottom: 5%;
+  right: 3%;
+}
+.playball-button {
+  display: inline-block;
+  background: #d5539b;
+  color: #fff;
+  font-family: 'Bebas Neue', var(--font-display), sans-serif;
+  font-size: clamp(9px, 1.4vw, 19px);
+  letter-spacing: 2px;
+  padding: clamp(5px, 0.9vw, 11px) clamp(10px, 1.8vw, 22px);
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background 0.18s, transform 0.1s;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+.playball-button:hover {
+  background: #b8347d;
+  transform: scale(1.04);
+  color: #fff;
+  text-decoration: none;
+}
+/* Mobile: stack cleanly */
+@media (max-width: 600px) {
+  .whiteboard-overlay {
+    position: static;
+    width: 100%;
+    height: auto;
+    background: #fff;
+    border: none;
+    filter: none;
+    padding: 16px;
+  }
+  .moneyball-base-image { display: none; }
+  .moneyball-scene { background: #1a1a2e; }
+  .whiteboard-title { font-size: 22px; color: #1a1a2e; }
+  .whiteboard-subtitle { font-size: 13px; color: #666; }
+  .whiteboard-leaderboard th,
+  .whiteboard-leaderboard td { font-size: 12px; padding: 4px 6px; }
+  .playball-button-container {
+    position: static;
+    text-align: center;
+    padding: 14px 16px;
+    background: #1a1a2e;
+  }
+  .playball-button { font-size: 18px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Moneyball Hero -->
+<section class="moneyball-hero">
+  <div class="moneyball-scene">
+    <img
+      src="/static/images/moneyball_hero.png"
+      alt="Epstein's Front Office Tool"
+      class="moneyball-base-image"
+      onerror="this.style.display='none'"
+    >
+
+    <!-- Whiteboard overlay: sits precisely on the whiteboard in the scene -->
+    <div class="whiteboard-overlay">
+      <div class="whiteboard-header">
+        <span class="whiteboard-title">EPSTEIN'S FRONT OFFICE TOOL</span>
+        <span class="whiteboard-subtitle">2025 Season Leaders — OPS</span>
+      </div>
+      <div class="whiteboard-table-container">
+        <table class="whiteboard-leaderboard" id="whiteboard-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Team</th>
+              <th>OPS</th>
+              <th>HR</th>
+              <th>AVG</th>
+              <th>OBP</th>
+            </tr>
+          </thead>
+          <tbody id="whiteboard-tbody">
+            <tr><td colspan="7" style="text-align:center;color:#aaa;padding:4px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Enter Front Office button -->
+    <div class="playball-button-container">
+      <a href="/leaderboard" class="playball-button">&#9654; Enter Front Office</a>
+    </div>
+  </div>
+</section>
+
+
+<!-- Original Hero (search + stats) -->
+<section style="background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%);border-bottom:1px solid var(--border);padding:40px 0 32px;">
+  <div class="container" style="text-align:center;max-width:700px;">
+    <img src="{{ mascot_url }}" alt="Toasty" style="width:80px;height:80px;object-fit:contain;margin-bottom:16px;" onerror="this.style.display='none'">
+    <h1 style="font-family:var(--font-display);font-size:3rem;color:var(--text);margin:0 0 6px;letter-spacing:2px;">HRL FRONT OFFICE TOOL</h1>
+    <p style="color:var(--muted);font-size:0.95rem;margin:0 0 24px;">Advanced Analytics for HRL Twin Cities Wiffleball</p>
+    <form action="/search" method="get" style="display:flex;gap:8px;max-width:480px;margin:0 auto 24px;">
+      <input name="q" type="text" placeholder="Search any HRL player…"
+             style="flex:1;padding:11px 16px;border:1px solid var(--border);border-radius:8px;font-family:var(--font-body);font-size:0.95rem;outline:none;background:#fff;"
+             id="hero-search" autocomplete="off">
+      <button type="submit" style="padding:11px 22px;background:var(--pink);color:#fff;border:none;border-radius:8px;font-family:var(--font-heading);font-weight:700;font-size:0.9rem;letter-spacing:0.06em;cursor:pointer;">SEARCH</button>
+    </form>
+    <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-family:var(--mono);font-size:1.4rem;font-weight:600;color:var(--text);" id="stat-players">—</div>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);font-family:var(--font-heading);font-weight:600;">Players in DB</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:var(--mono);font-size:1.4rem;font-weight:600;color:var(--text);" id="stat-seasons">—</div>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);font-family:var(--font-heading);font-weight:600;">Seasons of Data</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:var(--mono);font-size:1.4rem;font-weight:600;color:var(--text);" id="stat-statlines">—</div>
+        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);font-family:var(--font-heading);font-weight:600;">Stat Lines</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- Leaderboard preview -->
+<section class="section">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">2025 Season Batting</h2>
+      <div style="display:flex;align-items:center;gap:1rem">
+        <div class="tab-group">
+          <button class="tab active" id="home-std-btn" onclick="homeToggle('standard')">Standard</button>
+          <button class="tab" id="home-adv-btn" onclick="homeToggle('advanced')">Advanced</button>
+        </div>
+        <a href="/leaderboard" class="section-link">Full Leaderboard →</a>
+      </div>
+    </div>
+
+    <!-- Standard table -->
+    <div id="home-standard-table">
+    <div class="table-wrap">
+      <table class="stats-table" id="home-bat-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="sortable" data-col="player">Player</th>
+            <th class="sortable num" data-col="games">G</th>
+            <th class="sortable num" data-col="ab">AB</th>
+            <th class="sortable num" data-col="avg">AVG</th>
+            <th class="sortable num" data-col="hr">HR</th>
+            <th class="sortable num" data-col="rbi">RBI</th>
+            <th class="sortable num" data-col="r">R</th>
+            <th class="sortable num" data-col="obp">OBP</th>
+            <th class="sortable num" data-col="slg">SLG</th>
+            <th class="sortable num" data-col="ops">OPS</th>
+            <th class="sortable num" data-col="so">SO</th>
+            <th class="sortable num" data-col="bb">BB</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set max_hr = batting_leaders | map(attribute='hr') | select | max if batting_leaders else 0 %}
+          {% set max_avg = batting_leaders | map(attribute='avg') | select | max if batting_leaders else 0 %}
+          {% set max_rbi = batting_leaders | map(attribute='rbi') | select | max if batting_leaders else 0 %}
+          {% for row in batting_leaders | sort(attribute='hr', reverse=True) %}
+          <tr onclick="window.location='/player/{{ row.player_hashtag }}'" class="clickable-row">
+            <td class="player-thumb-cell">
+              {% if row.pic_url %}
+              <img src="{{ row.pic_url }}" alt="{{ row.player_hashtag }}" class="player-thumb" onerror="this.style.opacity='0'">
+              {% endif %}
+            </td>
+            <td class="player-name-cell">
+              <a href="/player/{{ row.player_hashtag }}">{{ display_names.get(row.player_hashtag, row.player_hashtag) }}</a>
+              <span class="team-tag">{{ row.team_name }}</span>
+            </td>
+            <td class="num">{{ row.games or '—' }}</td>
+            <td class="num">{{ row.ab or '—' }}</td>
+            {% set ppct = home_pct_map.get(row.player_hashtag, {}) %}
+            <td class="num {% if row.avg == max_avg %}stat-leader-blue{% endif %}" data-pct="{{ ppct.get('avg', '') }}" data-lib="false">
+              {{ '%.3f'|format(row.avg) if row.avg else '.000' }}
+            </td>
+            <td class="num {% if row.hr == max_hr %}stat-leader-pink{% endif %}">{{ row.hr or 0 }}</td>
+            <td class="num {% if row.rbi == max_rbi %}stat-leader-pink{% endif %}">{{ row.rbi or 0 }}</td>
+            <td class="num">{{ row.r or 0 }}</td>
+            <td class="num" data-pct="{{ ppct.get('obp', '') }}" data-lib="false">{{ '%.3f'|format(row.obp) if row.obp else '.000' }}</td>
+            <td class="num" data-pct="{{ ppct.get('slg', '') }}" data-lib="false">{{ '%.3f'|format(row.slg) if row.slg else '.000' }}</td>
+            <td class="num" data-pct="{{ ppct.get('ops', '') }}" data-lib="false">{{ '%.3f'|format(row.ops) if row.ops else '.000' }}</td>
+            <td class="num">{{ row.so or 0 }}</td>
+            <td class="num">{{ row.bb or 0 }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="13" class="empty-row">No 2025 batting data available</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Color legend for AVG/OBP/SLG/OPS cells -->
+    <div id="home-pct-legend" style="display:flex;align-items:center;gap:10px;margin-top:8px;margin-bottom:0;">
+      <div style="width:100px;height:8px;border-radius:4px;background:linear-gradient(to right,#99c9ea,#ffffff,#d5539b);flex-shrink:0;border:1px solid #e0e0e0;"></div>
+      <span style="font-size:0.68rem;color:var(--muted);font-family:var(--font-body);">AVG/OBP/SLG/OPS shading = percentile vs all 2025 qualifiers</span>
+    </div>
+    </div><!-- /home-standard-table -->
+
+    <!-- Advanced table -->
+    <div id="home-advanced-table" style="display:none">
+    <div class="table-wrap">
+      <table class="stats-table" id="home-adv-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="sortable num" data-col="player">Player</th>
+            <th class="sortable num" data-col="ops_plus" title="OPS normalized to league average. 100 = league average, higher is better.">OPS+</th>
+            <th class="sortable num" data-col="era_plus" title="ERA normalized to league average. 100 = league average, higher is better.">ERA+</th>
+            <th class="sortable num" data-col="ab_hr" title="At-Bats per Home Run. Lower is better.">AB/HR</th>
+            <th class="sortable num" data-col="bb_k" title="Walk-to-strikeout ratio.">BB/K</th>
+            <th class="sortable num" data-col="k_per_6" title="Strikeouts per 6 innings pitched. Higher is better.">K/6</th>
+            <th class="sortable num" data-col="bb_per_6" title="Walks allowed per 6 innings pitched. Lower is better.">BB/6</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in batting_leaders | sort(attribute='hr', reverse=True) %}
+          {% set cs = custom_map.get(row.player_hashtag, {}) %}
+          <tr onclick="window.location='/player/{{ row.player_hashtag }}'" class="clickable-row">
+            <td class="player-thumb-cell">
+              {% if row.pic_url %}
+              <img src="{{ row.pic_url }}" alt="{{ row.player_hashtag }}" class="player-thumb" onerror="this.style.opacity='0'">
+              {% endif %}
+            </td>
+            <td class="player-name-cell">
+              <a href="/player/{{ row.player_hashtag }}">{{ display_names.get(row.player_hashtag, row.player_hashtag) }}</a>
+            </td>
+            <td class="num {% if cs.ops_plus and cs.ops_plus >= 110 %}stat-leader-blue{% elif cs.ops_plus and cs.ops_plus < 90 %}below-avg-stat{% endif %}">
+              {{ cs.ops_plus | int if cs.ops_plus is not none else '—' }}
+            </td>
+            <td class="num {% if cs.era_plus and cs.era_plus >= 110 %}stat-leader-blue{% elif cs.era_plus and cs.era_plus < 90 %}below-avg-stat{% endif %}">
+              {{ cs.era_plus | int if cs.era_plus is not none else '—' }}
+            </td>
+            <td class="num">{{ '%.1f'|format(cs.ab_hr) if cs.ab_hr is not none else '—' }}</td>
+            <td class="num">{{ '%.2f'|format(cs.bb_k) if cs.bb_k is not none else '—' }}</td>
+            <td class="num">{{ '%.2f'|format(cs.k_per_6) if cs.k_per_6 is not none else '—' }}</td>
+            <td class="num">{{ '%.2f'|format(cs.bb_per_6) if cs.bb_per_6 is not none else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    </div><!-- /home-advanced-table -->
+  </div>
+</section>
+
+<!-- Player cards -->
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">The Roster</h2>
+    <div class="player-grid">
+      {% for p in players %}
+      <a href="/player/{{ p.hashtag }}" class="player-card">
+        <div class="player-card-photo">
+          {% if p.pic_url %}
+          <img src="{{ p.pic_url }}" alt="{{ p.nickname }}" onerror="this.onerror=null; this.src='{{ mascot_url }}'">
+          {% else %}
+          <div class="no-photo-placeholder">{{ p.nickname[0] }}</div>
+          {% endif %}
+        </div>
+        <div class="player-card-info">
+          <div class="player-card-name">{{ p.nickname }}</div>
+          {% if career_map.get(p.hashtag) %}
+          {% set c = career_map[p.hashtag] %}
+          <div class="player-card-stats">
+            <span class="cs"><span class="cs-val">{{ c.hr or 0 }}</span><span class="cs-lbl">HR</span></span>
+            <span class="cs"><span class="cs-val">{{ '%.3f'|format(c.avg) if c.avg else '.000' }}</span><span class="cs-lbl">AVG</span></span>
+            <span class="cs"><span class="cs-val">{{ c.g or 0 }}</span><span class="cs-lbl">G</span></span>
+          </div>
+          {% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Whiteboard leaderboard ────────────────────────────────────────────────
+async function loadWhiteboardLeaderboard() {
+  try {
+    const res = await fetch('/api/home/leaderboard');
+    const data = await res.json();
+    const tbody = document.getElementById('whiteboard-tbody');
+    if (!tbody) return;
+    if (!data.players || data.players.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#888">No data</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.players.map((p, i) => `
+      <tr onclick="window.location='/player/${encodeURIComponent(p.player_slug)}'" style="cursor:pointer">
+        <td>${i + 1}</td>
+        <td>${p.player_name}</td>
+        <td>${p.team || ''}</td>
+        <td>${p.ops != null ? p.ops.toFixed(3) : '—'}</td>
+        <td>${p.hr != null ? p.hr : '—'}</td>
+        <td>${p.avg != null ? ('.' + String(Math.round(p.avg * 1000)).padStart(3, '0')) : '—'}</td>
+        <td>${p.obp != null ? ('.' + String(Math.round(p.obp * 1000)).padStart(3, '0')) : '—'}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    const tbody = document.getElementById('whiteboard-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#aaa">—</td></tr>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadWhiteboardLeaderboard);
+
+// ── Home toggle ───────────────────────────────────────────────────────────
+function homeToggle(view) {
+  const isAdv = view === 'advanced';
+  document.getElementById('home-standard-table').style.display = isAdv ? 'none' : '';
+  document.getElementById('home-advanced-table').style.display = isAdv ? '' : 'none';
+  document.getElementById('home-std-btn').classList.toggle('active', !isAdv);
+  document.getElementById('home-adv-btn').classList.toggle('active', isAdv);
+}
+
+// ── Simple table sort ─────────────────────────────────────────────────────
+document.querySelectorAll('.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const table = th.closest('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr.clickable-row'));
+    const asc = th.classList.toggle('sort-asc');
+    th.closest('thead').querySelectorAll('.sortable').forEach(h => {
+      if (h !== th) { h.classList.remove('sort-asc', 'sort-desc'); }
+    });
+    th.classList.toggle('sort-desc', !asc);
+    const idx = Array.from(th.closest('tr').children).indexOf(th);
+    rows.sort((a, b) => {
+      const av = a.children[idx]?.textContent.trim().replace(/[^0-9.\-]/g,'') || '';
+      const bv = b.children[idx]?.textContent.trim().replace(/[^0-9.\-]/g,'') || '';
+      const an = parseFloat(av), bn = parseFloat(bv);
+      if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+      return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  });
+});
+
+// ── Hero stat boxes ───────────────────────────────────────────────────────
+fetch('/api/db_stats').then(r=>r.json()).then(d=>{
+  if (d.players) document.getElementById('stat-players').textContent = d.players.toLocaleString();
+  if (d.seasons) document.getElementById('stat-seasons').textContent = d.seasons;
+  if (d.statlines) document.getElementById('stat-statlines').textContent = d.statlines.toLocaleString();
+}).catch(()=>{});
+
+// ── Percentile cell shading for home batting preview ──────────────────────
+(function applyHomePctShading() {
+  document.querySelectorAll('#home-standard-table td[data-pct]').forEach(td => {
+    const pctStr = td.getAttribute('data-pct');
+    const lib = td.getAttribute('data-lib') === 'true';
+    if (pctStr && pctStr !== '') {
+      const pct = parseFloat(pctStr);
+      if (!isNaN(pct)) {
+        const color = getPercentileColor(pct, !lib);
+        if (color) td.style.backgroundColor = color;
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

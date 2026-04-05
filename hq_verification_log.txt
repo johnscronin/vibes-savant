@@ -1,0 +1,13 @@
+=== Step 1 Run: 2026-03-28 ===
+Step 1 complete. Verdict: CORRECT. Evidence: HQ batting pool (54 qualified players) is smaller than overall batting pool (185 players). HQ percentiles are stored with pool_size=54, confirming ranking is within the HQ pool only. HQ OPS values do NOT uniformly show lower values than overall OPS (some players perform better vs HQ pitchers, e.g. Griz 1.895 HQ vs 1.6 overall), but the percentile logic correctly ranks within pool. The stat_type='vs_hq_pitcher' uses stat_name='hq_ops' (not 'ops') - this is consistent naming convention. Pool sizes: batting overall=185, vs_hq_pitcher qualified=54, vs_hq_hitter pool=69.
+2025 HQ batting pool: 54 players vs overall pool: 185 players
+Top HQ OPS player: Griz HQ_OPS=1.895 overall_OPS=1.6
+
+=== Step 6 Run: 2026-03-28 ===
+Step 6 complete. All checks passed.
+CHECK 1 - HQ percentile pool size in /api/player/Epstein/percentiles: PASS (hq_batting_pool_size=54, hq_pitching_pool_size=69)
+CHECK 2 - /api/hq-opponents?season=2025: PASS (12 HQ pitchers, 18 HQ batters, WHIP cutoff=1.23, OPS cutoff=1.201)
+CHECK 3 - All page loads: PASS (all 200 OK)
+CHECK 4 - Nav link hq-opponents: PASS
+CHECK 5 - 2022 season data: PASS (11 pitchers, 15 batters)
+

@@ -1,0 +1,255 @@
+HQ OPPONENT SPLITS FULL REBUILD LOG
+====================================
+Date: 2026-03-28
+DB: /Users/Cronin/Desktop/JOHN AI WORK/vibes_savant_site/vibes_savant.db
+Backup: vibes_savant_backup_20260328_1256.db
+
+STEP 1 - BvP ACCURACY AUDIT
+============================
+
+BvP Table Structure:
+- 25 columns: id, player_name, season (TEXT), opposing_pitcher, g, ab, r, h, doubles, triples, hr, rbi, bb, sac, so, roe, hrr, sor, avg, obp, slg, ops, tab_type, source, player_slug
+- NOTE: season column is TEXT type (stores 'Career' for career rows plus year strings)
+- NOTE: No 'pa' column - PA must be computed as ab+bb+sac
+
+Total rows: 71,296
+Unique batters (COALESCE player_slug/player_name): 262
+Unique pitchers: 497
+Rows by source: combined=68,107 | regular=3,189 | playoff=0
+
+Seasons covered: 2004-2025 (plus 'Career' rows = 24,007)
+Missing season: 0 (no null/empty/0 season rows)
+
+Pitcher match rate vs league_pitching_stats (same season):
+- Total distinct pitcher-season combos: 1,506 matched + 940 unmatched (out of ~2,446 total)
+- NOTE: 940 unmatched are largely sub-threshold pitchers (below min IP) not in lps
+- 186 distinct pitcher names in BvP that don't appear in lps at ANY season
+- These are non-qualifying pitchers - expected behavior
+
+Batter match rate vs league_batting_stats:
+- 1,331 matched + 363 unmatched
+- Name format difference: BvP uses display names (e.g., 'Fish Hook')
+  while batting_stats uses hashtag format ('FishHook')
+- This is a known formatting difference handled by name_mappings
+
+Epstein 2025 PA check:
+- BvP computed PA (ab+bb+sac): 217
+- batting_stats PA: 217
+- MATCH - BvP covers all 217 PA for Epstein 2025
+
+Playoff BvP rows: 0 (none in database)
+- source='playoff' returns 0 rows across all seasons
+
+BvP Completeness (players with >20 missing PA vs batting_stats):
+- Many players have 0 BvP rows but non-zero batting_stats PA
+- Top examples: AndretheGiant 2017 (347 PA missing), SuperDave 2017 (336 PA)
+- These are scrape gaps for older players or name format mismatches
+- Key 2025 gaps: DrSeuss (330), Psych (304), H8R (264), DodgerDave (263)
+- Name format issue: batting_stats uses 'DrSeuss' but BvP may use 'Dr. Seuss'
+  (which IS in league_pitching_stats - this is a batter scrape gap, not a name issue)
+
+
+STEP 2 - BvP DATA FIXES
+=======================
+
+FIX A: Delete rows with missing/null season
+- No rows deleted (0 rows had null/empty/0 season)
+- Note: BvP season column is TEXT type; 'Career' rows exist for career totals
+
+FIX B: Name normalization mappings
+- name_mappings table already exists with 100 entries (source column, not context)
+- BvP opposing_pitcher names use display format (e.g., "Fish Hook", "Huck Finn")
+- league_pitching_stats uses same display format - names match when pitcher qualifies
+- 940 unmatched pitcher-season combos are sub-threshold pitchers (below min IP)
+  These are NOT data errors - they are non-qualifying pitchers who appeared in BvP
+- 186 distinct pitcher names in BvP don't appear in lps at any season
+  (sub-threshold pitchers, very rare appearances, or historical players)
+- HQ pitcher list uses qualified pitchers only - unmatched pitchers are correctly excluded
+
+FIX C: HRL website playoff BvP check
+- URL: https://hrltwincities.com/player/Epstein - accessible (HTTP 200)
+- HRL page DOES have a "Playoffs" toggle button in the BvP section
+- However, the BvP data is served via Blazor JavaScript (Telerik Grid component)
+- Static HTML scraping CANNOT capture playoff BvP data
+- Playwright/Selenium would be required to toggle the button and capture data
+- CONCLUSION: Playoff BvP not available via current scraping method
+  "BvP playoff data not available - HRL site requires JS rendering for playoff toggle"
+
+FIX D: Players with significantly incomplete BvP (>20 PA missing):
+- Many players have 0 BvP rows but non-zero batting_stats PA
+- Top 2025 examples: DrSeuss (330 PA, 0 BvP rows), Psych (304 PA, 0 BvP rows)
+- These players appear in BvP ONLY under their display name format:
+  batting_stats uses 'DrSeuss' but BvP has no such player listed
+  This is a scrape gap - these players' BvP data was not scraped
+- Players like FishHook (38 BvP rows 2025) and HuckFinn (23 BvP rows) ARE present
+  confirming name format works for those; other players are truly missing
+
+
+STEP 3 - HQ PITCHER LIST REBUILD (20% threshold)
+=================================================
+Method: bottom 20% by WHIP (best pitchers) from qualified starters (WHIP not null, IP >= min_ip)
+cutoff_index = max(1, int(n * 0.20))
+cutoff_whip = sorted_whips_asc[cutoff_index - 1]
+
+Results:
+- Table dropped and recreated with range_min_whip, range_max_whip, total_qualified_pitchers columns
+- Seasons 2004-2025 processed
+- Total qualified pitchers: 1,215
+- Total HQ designations: 241
+
+2025 Results:
+- 60 qualified pitchers (min IP: 37.0)
+- 12 HQ pitchers
+- Cutoff WHIP: 1.230
+- Range: 0.650 - 1.230
+- HQ Pitchers: DaVinci(0.650), Mippey5(0.800), Caveman Kershaw(0.900), Psych(0.980),
+  Cakes(1.040), Shandy(1.050), pNut(1.110), Nightmare(1.120), Big Hoss(1.140),
+  Web Gem(1.200), Air Jordy(1.230), T Sea(1.230)
+
+STEP 4 - HQ BATTER LIST REBUILD (20% threshold)
+================================================
+Method: top 20% by OPS from qualified batters (OPS not null, PA >= min_pa via batting_stats join)
+cutoff_index = int(n * 0.80) [80th percentile ascending = top 20%]
+cutoff_ops = sorted_ops_asc[cutoff_index]
+
+Results:
+- Table dropped and recreated with range_min_ops, range_max_ops, total_qualified_batters columns
+- Seasons 2004-2025 processed
+- Total qualified batters: 1,541
+- Total HQ designations: 317
+
+2025 Results:
+- 86 qualified batters (min PA: 100)
+- 18 HQ batters
+- Cutoff OPS: 1.201
+- Range: 1.201 - 1.716
+- HQ Batters (top): Knipples(1.716), Anakin(1.635), Griz(1.600), Meow(1.501),
+  Smallpox(1.490), Taco(1.481), Kuks(1.462), Stix(1.363), Sanchez(1.334),
+  Cakes(1.291), Fishy(1.278), Face(1.269), Psych(1.269), DaVinci(1.257),
+  Epstein(1.246), Flow(1.223), Dumpy(1.213), Keanu(1.201)
+
+
+STEP 5 - HQ BATTING SPLITS RECALCULATION
+=========================================
+Added 12 new columns to hq_opponent_splits: player_slug, hq_definition, range_min,
+range_max, total_hq_opponents, is_estimate, bf, era, obp_against, baa, k_per_6, bb_per_6
+
+Method: For each player-season in BvP (non-Career), aggregated counting stats
+vs HQ pitchers only. PA computed as ab+bb+sac. Rate stats calculated from aggregates.
+Qualifies = 1 if PA >= 15. Sanity check: HQ OPS > overall OPS by >0.200 flagged.
+
+Results:
+- Deleted 1,534 existing vs_hq_pitcher records
+- Inserted 1,694 new records
+- Qualified (PA>=15): 1,116
+- Unqualified (PA<15): 578
+- Sanity warnings (OPS >0.200 above overall): 53 (retained, not deleted)
+
+2025 sample: Griz led 2025 HQ batting (OPS 1.895 in 19 PA), DaVinci 1.450 (15 PA)
+
+STEP 6 - HQ PITCHING SPLITS RECALCULATION
+==========================================
+Method: For each distinct pitcher-season in BvP, aggregated counting stats
+vs HQ batters only. BF computed as ab+bb+sac. ERA estimated as runs_est*6/ip_est.
+IP estimated as BF/3.3. Qualifies = 1 if BF >= 15.
+
+Results:
+- Deleted 2,018 existing vs_hq_hitter records
+- Inserted 2,446 new records
+- Qualified (BF>=15): 1,401
+- Unqualified (BF<15): 1,045
+
+2025 sample: Cakes led 2025 HQ pitching (ERA 1.93 in 38 BF), Air Jordy 2.22 (50 BF)
+
+
+STEP 7 - HQ PERCENTILE RANKINGS RECALCULATION
+==============================================
+Deleted 25,792 existing HQ percentile records and rebuilt from scratch.
+
+Batting vs HQ stats ranked (10 stats):
+  hq_pa, hq_ops, hq_obp, hq_avg, hq_slg, hq_bb_pct, hq_k_pct (inverted),
+  hq_bb_k, hq_iso, hq_babip
+  Total records: 16,940
+
+Pitching vs HQ stats ranked (8 stats):
+  hqpit_bf, hqpit_era (inverted), hqpit_obp (inverted), hqpit_baa (inverted),
+  hqpit_k_pct, hqpit_bb_pct (inverted), hqpit_k_per_6, hqpit_bb_per_6 (inverted)
+  Total records: 18,446
+
+Pool sizes by season (all >= 10, no flags):
+- 2025 batting pool: 54 qualified batters
+- 2025 pitching pool: 69 qualified pitchers
+- 2004 (smallest): 18 batters, 22 pitchers (all above threshold)
+- All seasons have >= 10 players
+
+
+STEP 8 - HQ TOOLTIP AND API UPDATE
+====================================
+Updated /api/player/<slug>/percentiles to include:
+- hq_pitcher_cutoff_whip, hq_pitcher_range_min, hq_pitcher_range_max, hq_pitcher_count
+- hq_batter_cutoff_ops, hq_batter_range_min, hq_batter_range_max, hq_batter_count
+- vs_hq_pitcher: {pa, ops, obp, avg, slg, qualifies, total_hq_opponents}
+- vs_hq_hitter: {bf, era, obp_against, baa, k_per_6, bb_per_6, qualifies, total_hq_opponents}
+
+Updated player.html:
+- Added dynamic HQ tooltip on "vs HQ Opponents" button with:
+  - Batting section: "Performance vs HQ Pitchers", WHIP range, count, "Minimum 15 PA"
+  - Pitching section: "Performance vs HQ Batters", OPS range, count, "Minimum 15 BF"
+  - Styled: white bg, box-shadow, border-radius 8px, IBM Plex Sans/Mono
+  - Values populated dynamically from API response
+- Updated 15% → 20% threshold labels throughout
+- Fixed pct-toggle-row overflow:hidden → overflow:visible to allow tooltip rendering
+
+STEP 9 - PA/BF SCHEDULE DIFFICULTY BAR
+========================================
+Added to player.html:
+1. Sample size chips: "PA vs HQ Pitchers: X" / "BF vs HQ Batters: X"
+   - Gray pill if qualifies, muted red if DNQ (< 15 PA/BF)
+   - Empty state: "No recorded matchups vs HQ pitchers this season"
+   
+2. PA (hq_pa) as FIRST bar in HQ batting section with sub-label "Schedule Difficulty"
+3. BF (hqpit_bf) as FIRST bar in HQ pitching section with sub-label "Schedule Difficulty"
+
+4. Updated HQ batting stat order:
+   ['hq_pa','hq_ops','hq_obp','hq_avg','hq_slg','hq_bb_pct','hq_k_pct','hq_bb_k']
+   
+5. Updated HQ pitching stat order:
+   ['hqpit_bf','hqpit_era','hqpit_k_per_6','hqpit_bb_per_6','hqpit_k_pct','hqpit_bb_pct','hqpit_baa','hqpit_obp']
+   
+6. Ghost bar treatment for DNQ players (qualifies=0): 35% opacity, Est. note
+
+Added CSS to gauges.css:
+- .pbar-sublabel (italic sub-label under stat name)
+- .hq-info-tooltip (hover tooltip on HQ button)
+- .hq-sample-chip, .hq-sample-chip-dnq, .hq-sample-chip-empty
+- .hq-chip-num, .hq-chip-dnq
+
+STEP 10 - FINAL VERIFICATION
+==============================
+Flask server started on port 5000.
+
+CHECK 1: /api/player/Epstein/percentiles?season=2025
+  PASS: hq_pitcher_cutoff_whip=1.23 present
+  PASS: vs_hq_pitcher stats present (10 stat entries)
+  PA vs HQ pitchers: 32
+  OPS vs HQ pitchers: 0.652
+
+CHECK 2: /api/player/CatNip/percentiles?season=2025
+  PASS: hq_batter_cutoff_ops=1.201 present
+  PASS: vs_hq_hitter stats present (8 stat entries)
+  BF vs HQ batters: 1 (not qualified - 1 BF < 15)
+  ERA vs HQ batters: 5.94
+
+CHECK 3-6: Player pages
+  PASS: /player/Epstein - HTTP 200
+  PASS: /player/CatNip - HTTP 200
+  PASS: /player/Psych - HTTP 200
+  PASS: /player/Smallpox - HTTP 200
+
+2025 HQ WHIP cutoff: 1.230 (12 HQ pitchers)
+2025 HQ OPS cutoff: 1.201 (18 HQ batters)
+2025 Batting pool size: 54 qualified batters
+2025 Pitching pool size: 69 qualified pitchers
+
+Flask server killed.
+

@@ -1,0 +1,30 @@
+
+=== STEP 1 AUDIT - 2026-03-28 ===
+batting_stats columns: games, pa, ab, r, h, singles, doubles, triples, hr, rbi, bb, sac, so, roe, avg, obp, slg, ops, hr_rate, k_rate, xbh, total_bases
+pitching_stats columns: g, gs, w, l, sv, sho, ip, bf, ha, opp_r, opp_hr, k, k_per_6, opp_bb, opp_bb_per_6, baa, whip, era
+custom_stats columns: ops_plus, patience_index, ab_hr, bb_k, bb_pct, k_pct, iso, bat_babip, rc, era_plus, k_per_6, bb_per_6, pit_k_pct, pit_bb_pct, pit_babip, lob_pct, bat_qualified, pit_qualified
+percentile stat_types: batting (8 stats), pitching (9 stats), custom (2 stats), vs_hq_pitcher (10 stats), vs_hq_hitter (8 stats), splits (13 stats), hq_pitcher (5 stats)
+Qualified batters 2025: 123 (pa>=100)
+Qualified pitchers 2025: 61 (ip>=37)
+NOTE: pitching_stats has no 'opp_bb_per_6' equivalent labeled - uses opp_bb_per_6 column
+NOTE: hq_opponent_splits uses split_type 'vs_hq_pitcher' (batting vs HQ pitchers) and 'vs_hq_hitter' (pitching vs HQ batters)
+NOTE: custom_stats uses 'bat_babip' not 'babip'
+
+=== STEP 7 VERIFICATION - 2026-03-28 ===
+PASS: /api/leaderboard/batting - 123 qualified players, Epstein OPS=1.246, OPS%ile=83, AVG%ile=63
+PASS: /api/leaderboard/pitching - 81 players, CatNip ERA=2.59, ERA%ile=87, ERA+=247
+PASS: /api/leaderboard/hq-batting - 54 qualified players
+PASS: /api/leaderboard/hq-pitching - 69 qualified players
+PASS: / - HTTP 200
+PASS: /leaderboard - HTTP 200
+PASS: /player/Epstein - HTTP 200
+PASS: Raw Stats toggle - found
+PASS: Percentile toggle - found (6 matches)
+PASS: Advanced toggle - found (2 matches)
+PASS: Color gradient - found (4 matches)
+PASS: OPS+ column def - found
+PASS: vs HQ toggle - found (4 matches)
+PASS: Home page data-pct attrs - 34 found
+PASS: Home page color legend - found
+PASS: Home page shading script - found
+All verification checks complete.

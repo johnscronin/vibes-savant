@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Vibes Front Office Tool{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="/" class="header-brand">
+      <img src="{{ mascot_url }}" alt="Vibes Mascot" class="header-logo" onerror="this.style.display='none'">
+      <span class="header-title">VIBES FRONT OFFICE TOOL</span>
+    </a>
+    <div class="header-search-wrap" id="header-search-wrap">
+      <input type="text" id="nav-search" class="nav-search-input" placeholder="Search players…" autocomplete="off" aria-label="Search players">
+      <div class="nav-search-dropdown" id="nav-search-dropdown"></div>
+    </div>
+    <nav class="header-nav">
+      <a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a>
+      <a href="/leaderboard" class="{% if request.path == '/leaderboard' %}active{% endif %}">Leaderboard</a>
+      <a href="/hq-opponents" class="{% if request.path == '/hq-opponents' %}active{% endif %}">HQ</a>
+      <div class="nav-dropdown" id="players-dropdown">
+        <span class="nav-dropdown-label" id="players-dropdown-label">Vibes ▾</span>
+        <div class="nav-dropdown-menu">
+          {% for name in ['Anakin','CatNip','Cheerio','Epstein','FishHook','HuckFinn','Jessie','Kar','Nightmare','Fortnite'] %}
+          <a href="/player/{{ name }}">{{ display_names.get(name, name) }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="site-footer">
+  <span>Property of the Vibes Wiffleball Organization</span>
+</footer>
+
+<script src="{{ url_for('static', filename='js/stat_config.js') }}"></script>
+{% block scripts %}{% endblock %}
+
+<script>
+// Click-based dropdown (mobile compatible)
+(function() {
+  const dropdown = document.getElementById('players-dropdown');
+  const label = document.getElementById('players-dropdown-label');
+  if (!dropdown || !label) return;
+  label.addEventListener('click', function(e) {
+    e.stopPropagation();
+    dropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', function() {
+    dropdown.classList.remove('open');
+  });
+  dropdown.querySelector('.nav-dropdown-menu').addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+})();
+
+// Nav search bar
+(function() {
+  const input = document.getElementById('nav-search');
+  const drop  = document.getElementById('nav-search-dropdown');
+  if (!input || !drop) return;
+  let debounce;
+  input.addEventListener('input', function() {
+    clearTimeout(debounce);
+    const q = this.value.trim();
+    if (q.length < 2) { drop.innerHTML=''; drop.classList.remove('open'); return; }
+    debounce = setTimeout(() => {
+      fetch('/api/search?q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(results => {
+          if (!results.length) { drop.innerHTML='<div class="nsr-empty">No players found</div>'; drop.classList.add('open'); return; }
+          drop.innerHTML = results.map(p => `
+            <a class="nsr-item" href="/player/${encodeURIComponent(p.slug)}">
+              <img src="${p.pic_url}" class="nsr-img" onerror="this.src='${p.pic_url}'">
+              <span class="nsr-name">${p.display_name}</span>
+              <span class="nsr-team">${p.team || ''}</span>
+            </a>`).join('');
+          drop.classList.add('open');
+        });
+    }, 150);
+  });
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      drop.classList.remove('open');
+      window.location = '/search?q=' + encodeURIComponent(this.value.trim());
+    }
+    if (e.key === 'Escape') { drop.classList.remove('open'); input.blur(); }
+  });
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#header-search-wrap')) drop.classList.remove('open');
+  });
+})();
+</script>
+</body>
+</html>

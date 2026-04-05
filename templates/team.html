@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}{{ team.team_name }} — Vibes Front Office Tool{% endblock %}
+{% block content %}
+
+<!-- Team Header -->
+<section class="player-page-hero">
+  <div class="container">
+    <div style="display:flex;align-items:center;gap:24px;padding:28px 0;">
+      {% if team.logo_url %}
+      <img src="{{ team.logo_url }}" alt="{{ team.team_name }}" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none'">
+      {% endif %}
+      <div style="flex:1;">
+        <h1 style="font-family:var(--font-display);font-size:2.5rem;color:var(--text);margin:0 0 4px;">{{ team.team_name|upper }}</h1>
+        {% if most_recent_season %}
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          {% if prev_season %}<a href="/team/{{ team.hashtag }}/{{ prev_season }}" style="font-family:var(--mono);font-size:0.8rem;color:var(--muted);text-decoration:none;padding:2px 6px;border:1px solid var(--border);border-radius:4px;">← {{ prev_season }}</a>{% endif %}
+          <span style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;color:var(--blue);">{{ most_recent_season }} Season</span>
+          {% if next_season %}<a href="/team/{{ team.hashtag }}/{{ next_season }}" style="font-family:var(--mono);font-size:0.8rem;color:var(--muted);text-decoration:none;padding:2px 6px;border:1px solid var(--border);border-radius:4px;">{{ next_season }} →</a>{% endif %}
+          <a href="/teams?season={{ most_recent_season }}" style="font-size:0.75rem;color:var(--muted);margin-left:8px;">↗ Standings</a>
+        </div>
+        {% endif %}
+        {% if season_standings %}
+        <p style="color:var(--muted);font-size:0.82rem;margin:4px 0 0;">
+          {{ season_standings.wins }}-{{ season_standings.losses }}
+          {% if season_standings.city and season_standings.city != 'HRL' %} · {{ season_standings.city }}{% endif %}
+          {% if season_standings.division_name and season_standings.division_name != 'Main' %} {{ season_standings.division_name }}{% endif %}
+          {% if season_standings.playoff_result %} · <strong style="color:{% if 'Champion' in season_standings.playoff_result %}#d4af37{% else %}var(--blue){% endif %};">{{ season_standings.playoff_result }}</strong>{% endif %}
+        </p>
+        {% elif team.division %}
+        <p style="color:var(--muted);font-size:0.85rem;margin:0;">{{ team.division }} Division</p>
+        {% endif %}
+      </div>
+      <!-- Stat boxes -->
+      {% if stat_boxes %}
+      <div style="display:flex;gap:16px;">
+        {% if stat_boxes.avg is not none %}
+        <div style="text-align:center;padding:12px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+          <div style="font-family:var(--mono);font-size:1.3rem;font-weight:600;color:var(--blue);">{{ '%.3f'|format(stat_boxes.avg) if stat_boxes.avg else '—' }}</div>
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-family:var(--font-heading);font-weight:600;">Team AVG</div>
+        </div>
+        {% endif %}
+        {% if stat_boxes.era is not none %}
+        <div style="text-align:center;padding:12px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+          <div style="font-family:var(--mono);font-size:1.3rem;font-weight:600;color:var(--pink);">{{ '%.2f'|format(stat_boxes.era) if stat_boxes.era else '—' }}</div>
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-family:var(--font-heading);font-weight:600;">Team ERA</div>
+        </div>
+        {% endif %}
+        {% if stat_boxes.ops is not none %}
+        <div style="text-align:center;padding:12px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;">
+          <div style="font-family:var(--mono);font-size:1.3rem;font-weight:600;color:var(--text);">{{ '%.3f'|format(stat_boxes.ops) if stat_boxes.ops else '—' }}</div>
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);font-family:var(--font-heading);font-weight:600;">Team OPS</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- Tabs -->
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div class="stats-tab-bar" style="margin-bottom:0;">
+      <button class="tab active" onclick="teamTab('roster',this)">Roster</button>
+      <button class="tab" onclick="teamTab('records',this)">Records</button>
+      <button class="tab" onclick="teamTab('championships',this)">Championships</button>
+    </div>
+
+    <!-- Roster Tab -->
+    <div id="tab-roster" class="team-tab-pane" style="padding-top:24px;">
+      {% if most_recent_season %}<p style="color:var(--muted);font-size:0.85rem;margin-bottom:16px;">{{ most_recent_season }} Season Roster — <a href="/teams?season={{ most_recent_season }}" style="color:var(--muted);font-size:0.82rem;">← Back to Standings</a></p>{% endif %}
+      {% if roster %}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+        {% for p in roster %}
+        <a href="/player/{{ p.player_hashtag }}" style="display:flex;flex-direction:column;align-items:center;padding:16px 12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;text-decoration:none;color:inherit;text-align:center;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+          <img src="{{ p.pic_url }}" alt="{{ p.display_name }}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;margin-bottom:8px;background:var(--surface2);" onerror="this.style.opacity='0.3'">
+          <div style="font-family:var(--font-heading);font-weight:700;font-size:0.9rem;margin-bottom:4px;">{{ p.display_name }}</div>
+          <div style="font-size:0.75rem;color:var(--muted);font-family:var(--mono);">
+            {% if p.avg %}.{{ '%03d'|format((p.avg*1000)|int) }}{% endif %}
+            {% if p.hr %} · {{ p.hr }}HR{% endif %}
+            {% if p.era and not p.avg %} {{ '%.2f'|format(p.era) }} ERA{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p style="color:var(--muted);">No roster data available.</p>
+      {% endif %}
+    </div>
+
+    <!-- Records Tab -->
+    <div id="tab-records" class="team-tab-pane" style="display:none;padding-top:24px;">
+      {% if records %}
+      <div class="table-wrap">
+        <table class="stats-table" id="records-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-col="season">Season</th>
+              <th class="sortable num" data-col="wins">W</th>
+              <th class="sortable num" data-col="losses">L</th>
+              <th class="sortable num" data-col="win_pct">PCT</th>
+              <th class="sortable num" data-col="tier">Tier</th>
+              <th class="sortable num" data-col="rank">Rank</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in records %}
+            <tr {% if r.season in team.championships %}style="border-left:3px solid #d4af37;"{% elif r.season in team.runner_up %}style="border-left:3px solid var(--blue);"{% endif %}>
+              <td>{{ r.season }}</td>
+              <td class="num">{{ r.wins or '—' }}</td>
+              <td class="num">{{ r.losses or '—' }}</td>
+              <td class="num">{{ '%.3f'|format(r.win_pct) if r.win_pct else '—' }}</td>
+              <td><span class="tier-badge tier-{{ r.tier|lower if r.tier else 'weak' }}">{{ r.tier or '—' }}</span></td>
+              <td class="num">{{ r.rank or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p style="color:var(--muted);">No records data available.</p>
+      {% endif %}
+    </div>
+
+    <!-- Championships Tab -->
+    <div id="tab-championships" class="team-tab-pane" style="display:none;padding-top:24px;">
+      {% if team.championships %}
+      <h3 style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;margin-bottom:16px;color:#d4af37;">🏆 Championships ({{ team.championships|length }})</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+        {% for yr in team.championships %}
+        <span style="padding:6px 16px;background:#d4af3722;border:1px solid #d4af37;border-radius:6px;font-family:var(--font-heading);font-weight:700;font-size:0.95rem;color:#b8922e;">{{ yr }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if team.runner_up %}
+      {% if team.hashtag == 'Vibes' %}
+      <h3 style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;margin-bottom:8px;color:var(--blue);">World Series Runner-Up Appearances ({{ team.runner_up|length }})</h3>
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:12px;">The Vibes have made five World Series appearances, falling short each time in classic Vibes fashion.</p>
+      {% else %}
+      <h3 style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;margin-bottom:8px;color:var(--blue);">Runner-Up Appearances</h3>
+      {% endif %}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;">
+        {% for yr in team.runner_up %}
+        <span style="padding:6px 16px;background:rgba(153,201,234,0.15);border:1px solid var(--blue);border-radius:6px;font-family:var(--font-heading);font-weight:700;font-size:0.95rem;color:var(--blue);">{{ yr }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if not team.championships and not team.runner_up %}
+      <h3 style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;margin-bottom:16px;">Best Playoff Finishes</h3>
+      {% if records %}
+      <p style="color:var(--muted);">Best season: <strong>{{ records | sort(attribute='win_pct', reverse=True) | first }}</strong></p>
+      {% else %}
+      <p style="color:var(--muted);">No championship or playoff data available for this team.</p>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<style>
+.tier-badge { padding:2px 10px; border-radius:12px; font-size:0.78rem; font-weight:700; text-transform:uppercase; font-family:var(--font-heading); letter-spacing:0.04em; }
+.tier-elite   { background:rgba(213,83,155,0.12);  color:var(--pink); }
+.tier-average { background:rgba(153,201,234,0.15); color:#4a9cc7; }
+.tier-weak    { background:rgba(107,114,128,0.12); color:var(--muted); }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function teamTab(name, btn) {
+  document.querySelectorAll('.team-tab-pane').forEach(p => p.style.display='none');
+  document.querySelectorAll('.stats-tab-bar .tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).style.display='block';
+  btn.classList.add('active');
+}
+</script>
+{% endblock %}

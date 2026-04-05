@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}HRL Teams — Vibes Front Office Tool{% endblock %}
+{% block content %}
+<section style="padding:40px 0;">
+  <div class="container">
+    <div style="margin-bottom:28px;">
+      <h1 style="font-family:var(--font-display);font-size:2.5rem;color:var(--text);margin-bottom:4px;">HRL TEAMS</h1>
+      <p style="color:var(--muted);font-size:0.9rem;">{{ total_teams }} franchises in the HRL Twin Cities database</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:start;">
+
+      <!-- Eagan Division -->
+      <div>
+        <h2 style="font-family:var(--font-heading);font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--pink);border-bottom:2px solid var(--pink);padding-bottom:8px;margin-bottom:16px;">Eagan Division</h2>
+        {% for t in eagan_active %}
+        <a href="/team/{{ t.hashtag }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:inherit;margin-bottom:6px;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--surface)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg)'">
+          {% if t.logo_url %}<img src="{{ t.logo_url }}" alt="{{ t.team_name }}" style="width:32px;height:32px;object-fit:contain;" onerror="this.style.display='none'">{% endif %}
+          <span style="flex:1;font-family:var(--font-heading);font-weight:700;font-size:0.95rem;">{{ t.team_name }}</span>
+          {% if t.last_w is not none and t.last_l is not none %}
+          <span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted);">{{ t.last_w }}-{{ t.last_l }}</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+        {% if eagan_hist %}
+        <p style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-top:16px;margin-bottom:8px;">Historical Teams</p>
+        {% for t in eagan_hist %}
+        <a href="/team/{{ t.hashtag }}" style="display:flex;align-items:center;gap:10px;padding:6px 12px;text-decoration:none;color:var(--muted);font-size:0.85rem;border-radius:4px;margin-bottom:2px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+          <span style="font-family:var(--font-heading);font-weight:600;">{{ t.team_name }}</span>
+          <span style="font-size:0.75rem;">{{ t.first_season }}–{{ t.last_season }}</span>
+        </a>
+        {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- Hopkins Division -->
+      <div>
+        <h2 style="font-family:var(--font-heading);font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--blue);border-bottom:2px solid var(--blue);padding-bottom:8px;margin-bottom:16px;">Hopkins Division</h2>
+        {% for t in hopkins_active %}
+        <a href="/team/{{ t.hashtag }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:inherit;margin-bottom:6px;transition:border-color 0.15s,background 0.15s;" onmouseover="this.style.borderColor='var(--blue)';this.style.background='var(--surface)'" onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--bg)'">
+          {% if t.logo_url %}<img src="{{ t.logo_url }}" alt="{{ t.team_name }}" style="width:32px;height:32px;object-fit:contain;" onerror="this.style.display='none'">{% endif %}
+          <span style="flex:1;font-family:var(--font-heading);font-weight:700;font-size:0.95rem;">{{ t.team_name }}</span>
+          {% if t.last_w is not none and t.last_l is not none %}
+          <span style="font-family:var(--mono);font-size:0.8rem;color:var(--muted);">{{ t.last_w }}-{{ t.last_l }}</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+        {% if hopkins_hist %}
+        <p style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-top:16px;margin-bottom:8px;">Historical Teams</p>
+        {% for t in hopkins_hist %}
+        <a href="/team/{{ t.hashtag }}" style="display:flex;align-items:center;gap:10px;padding:6px 12px;text-decoration:none;color:var(--muted);font-size:0.85rem;border-radius:4px;margin-bottom:2px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+          <span style="font-family:var(--font-heading);font-weight:600;">{{ t.team_name }}</span>
+          <span style="font-size:0.75rem;">{{ t.first_season }}–{{ t.last_season }}</span>
+        </a>
+        {% endfor %}
+        {% endif %}
+      </div>
+
+    </div>
+
+    {% if other_active or other_hist %}
+    <div style="margin-top:32px;">
+      <h2 style="font-family:var(--font-heading);font-size:1rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:12px;">Other / Division Unknown</h2>
+      {% for t in other_active + other_hist %}
+      <a href="/team/{{ t.hashtag }}" style="display:inline-block;margin-right:12px;margin-bottom:6px;font-family:var(--font-heading);font-weight:600;color:var(--muted);text-decoration:none;font-size:0.85rem;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">{{ t.team_name }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

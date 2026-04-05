@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Epstein's Front Office Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0a0a14;
+    }
+
+    /* Full-screen scene */
+    .scene {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Layer 1 — background, full screen cover */
+    .layer-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 1;
+      display: block;
+    }
+
+    /* Layer 2a — white fill behind iframe (JS-positioned) */
+    .layer-whiteboard-bg {
+      position: absolute;
+      z-index: 2;
+      background: #ffffff;
+      pointer-events: none;
+      left: -9999px; /* hidden until JS runs */
+    }
+
+    /* Layer 2b — iframe container (JS-positioned) */
+    .layer-whiteboard {
+      position: absolute;
+      z-index: 2;
+      overflow: hidden;
+      background: #ffffff;
+      left: -9999px; /* hidden until JS runs */
+    }
+
+    .profile-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Layer 3 — foreground (transparent where whiteboard was) */
+    .layer-fg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 3;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* ── BRAD PITT SPEECH BUBBLE ───────────────────────── */
+    .bubble-brad {
+      position: absolute;
+      left: 2.1%;
+      top: 27.5%;
+      z-index: 4;
+      background: rgba(255,255,253,0.97);
+      border: 2px solid rgba(20,18,50,0.85);
+      border-radius: 16px;
+      padding: 18px 26px;
+      white-space: nowrap;
+      pointer-events: none;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: clamp(11px, 1.8vmin, 17px);
+      font-weight: 400;
+      color: rgb(20,18,50);
+      line-height: 1.5;
+    }
+    .bubble-brad::after {
+      content: '';
+      position: absolute;
+      bottom: -24px;
+      left: 52%;
+      width: 0; height: 0;
+      border-left: 14px solid transparent;
+      border-right: 14px solid transparent;
+      border-top: 24px solid rgba(255,255,253,0.97);
+      filter: drop-shadow(0 1px 0 rgba(20,18,50,0.6));
+    }
+
+    /* ── JONAH HILL SPEECH BUBBLE ──────────────────────── */
+    /* Tail exits right toward his mouth */
+    .bubble-jonah {
+      position: absolute;
+      right: 31%;
+      top: 3%;
+      z-index: 4;
+      background: rgba(255,255,253,0.97);
+      border: 2px solid rgba(20,18,50,0.85);
+      border-radius: 16px;
+      padding: 16px 24px;
+      white-space: nowrap;
+      pointer-events: none;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: clamp(10px, 1.6vmin, 15px);
+      font-weight: 400;
+      color: rgb(20,18,50);
+      line-height: 1.55;
+    }
+    .bubble-jonah::after {
+      content: '';
+      position: absolute;
+      right: -22px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-top: 13px solid transparent;
+      border-bottom: 13px solid transparent;
+      border-left: 22px solid rgba(255,255,253,0.97);
+      filter: drop-shadow(1px 0 0 rgba(20,18,50,0.6));
+    }
+
+    /* ── BUTTON ROW — JS positioned below whiteboard ── */
+    .button-row {
+      position: absolute;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      left: -9999px; /* hidden until JS runs */
+    }
+
+    .btn-enter {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: clamp(12px, 1.8vmin, 18px);
+      font-weight: 500;
+      color: #fff;
+      background: #d5539b;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 28px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      transition: background 0.15s, transform 0.1s;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .btn-enter:hover { background: #b8347d; transform: scale(1.02); color: #fff; text-decoration: none; }
+
+    .search-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 1;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      z-index: 1;
+    }
+    .search-icon svg { width: 16px; height: 16px; }
+    .search-input {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: clamp(11px, 1.6vmin, 15px);
+      font-weight: 400;
+      color: #1a1232;
+      background: #fff;
+      border: 3px solid #99c9ea;
+      border-radius: 8px;
+      padding: 11px 12px 11px 36px;
+      outline: none;
+      width: clamp(160px, 18vw, 320px);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input::placeholder { color: #a8b4c0; }
+    .search-input:focus { border-color: #6baed4; box-shadow: 0 0 0 3px rgba(153,201,234,0.25); }
+
+    .search-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 2px solid #99c9ea;
+      border-radius: 8px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+      z-index: 10;
+      overflow: hidden;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .search-dropdown.open { display: block; }
+    .dd-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f4f8;
+      text-decoration: none;
+      transition: background 0.1s;
+    }
+    .dd-item:last-child { border-bottom: none; }
+    .dd-item:hover, .dd-item:focus { background: rgba(153,201,234,0.15); outline: none; }
+    .dd-avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; background:#e5e7eb; flex-shrink:0; }
+    .dd-name { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:clamp(12px,1vw,15px); color:#111827; line-height:1.2; }
+    .dd-team { font-family:'IBM Plex Sans',sans-serif; font-size:clamp(9px,0.75vw,11px); color:#6b7280; }
+    .dd-empty { padding:12px; text-align:center; font-family:'IBM Plex Sans',sans-serif; font-size:12px; color:#9ca3af; }
+
+    .btn-shuffle {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: clamp(11px, 1.6vmin, 15px);
+      font-weight: 400;
+      color: rgba(255,255,255,0.8);
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 8px;
+      padding: 11px 16px;
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .btn-shuffle:hover { background: rgba(255,255,255,0.2); }
+    .btn-shuffle:disabled { opacity:0.5; cursor:default; }
+
+    /* ── JONAH PLAYER NAME LINK ────────────────────────── */
+    .jonah-player-name {
+      color: #d5539b;
+      text-decoration: none;
+      border-bottom: 2px dotted #d5539b;
+      padding-bottom: 1px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      pointer-events: auto;
+    }
+    .jonah-player-name:hover {
+      color: #b8347d;
+      border-bottom-color: #b8347d;
+    }
+  </style>
+</head>
+<body>
+<div class="scene">
+
+  <!-- Layer 1: background full-screen -->
+  <img class="layer-bg"
+       src="/static/images/moneyball_greenscreen_hires.jpg"
+       alt="Epstein's Front Office Tool"
+       onerror="this.style.display='none'">
+
+  <!-- Layer 2a: white fill behind iframe -->
+  <div class="layer-whiteboard-bg" id="wb-bg"></div>
+
+  <!-- Layer 2b: iframe -->
+  <div class="layer-whiteboard" id="wb">
+    <iframe
+      class="profile-iframe"
+      id="profile-frame"
+      src="/player/{{ random_slug }}?embed=true"
+      title="Player Profile"
+      scrolling="no"
+      frameborder="0"
+      marginwidth="0"
+      marginheight="0"
+      style="margin:0;padding:0;border:none;display:block;width:100%;height:100%">
+    </iframe>
+  </div>
+
+  <!-- Layer 3: Jonah Hill foreground (transparent where whiteboard was) -->
+  <img class="layer-fg"
+       src="/static/images/moneyball_foreground.png"
+       alt=""
+       onerror="this.style.display='none'">
+
+  <!-- Layer 4: Brad Pitt speech bubble -->
+  <div class="bubble-brad">
+    Why don't you walk me<br>through the board?
+  </div>
+
+  <!-- Layer 4: Jonah Hill speech bubble -->
+  <div class="bubble-jonah" id="jonah-bubble">
+    <span>Billy, this is </span><a
+      id="jonah-player-link"
+      href="/player/{{ random_slug }}"
+      class="jonah-player-name"
+    >{{ random_name }}</a><span>.</span><br>
+    <span id="jonah-defect">{{ jonah_defect }}</span>
+  </div>
+
+  <!-- Layer 4: buttons -->
+  <div class="button-row" id="btn-row">
+    <a href="/leaderboard" class="btn-enter">Enter Front Office</a>
+
+    <div class="search-wrap">
+      <span class="search-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#99c9ea"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10.5" cy="10.5" r="6.5"/>
+          <line x1="15.5" y1="15.5" x2="21" y2="21"/>
+        </svg>
+      </span>
+      <input type="text" class="search-input" id="hero-search"
+             placeholder="Search any player in HRL history..."
+             autocomplete="off" spellcheck="false">
+      <div class="search-dropdown" id="search-dd"></div>
+    </div>
+
+    <button class="btn-shuffle" id="btn-shuffle">&#8635; New Player</button>
+  </div>
+
+</div>
+
+<script>
+// ── OVERLAY POSITIONING ───────────────────────────────────────────────────────
+// Both images are 3125×2072. Green zone in background measured by pixel analysis:
+// GL=1192, GT=392, GR=2897, GB=1378. Transparent overlay foreground covers same dims.
+const IMG_W = 3125, IMG_H = 2072;
+const GL = 1192, GT = 392, GR = 2897, GB = 1378;
+
+function positionOverlay() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const scale = Math.max(vw / IMG_W, vh / IMG_H);
+  const xOff  = (IMG_W * scale - vw) / 2;
+  const yOff  = (IMG_H * scale - vh) / 2;
+
+  const left   = Math.round(GL * scale - xOff);
+  const top    = Math.round(GT * scale - yOff);
+  const width  = Math.round((GR - GL) * scale);
+  const height = Math.round((GB - GT) * scale);
+
+  ['wb-bg', 'wb'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.left   = left   + 'px';
+    el.style.top    = top    + 'px';
+    el.style.width  = width  + 'px';
+    el.style.height = height + 'px';
+  });
+
+  const btnRow = document.getElementById('btn-row');
+  if (btnRow) {
+    btnRow.style.left  = left  + 'px';
+    btnRow.style.width = width + 'px';
+    btnRow.style.top   = (top + height + vh * 0.012) + 'px';
+  }
+}
+
+positionOverlay();
+window.addEventListener('resize', positionOverlay);
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+const TOASTY = 'https://i.ibb.co/m5cJfRtN/TOASTYPRIMARY.png';
+let idx = [];
+fetch('/api/players/all').then(r=>r.json()).then(d=>{idx=d.players||[];}).catch(()=>{});
+
+const input = document.getElementById('hero-search');
+const dd    = document.getElementById('search-dd');
+
+function renderDD(matches) {
+  if (!matches) { dd.classList.remove('open'); return; }
+  if (!matches.length) {
+    dd.innerHTML = '<div class="dd-empty">No players found</div>';
+  } else {
+    dd.innerHTML = matches.map(p => {
+      const slug  = encodeURIComponent(p.player_slug || p.player_name);
+      const photo = p.photo_url || TOASTY;
+      return `<a class="dd-item" href="/player/${slug}" tabindex="0">
+        <img class="dd-avatar" src="${photo}" onerror="this.src='${TOASTY}'" alt="">
+        <div>
+          <div class="dd-name">${p.player_name}</div>
+          ${p.team ? `<div class="dd-team">${p.team}</div>` : ''}
+        </div>
+      </a>`;
+    }).join('');
+  }
+  dd.classList.add('open');
+}
+
+input.addEventListener('input', () => {
+  const q = input.value.trim().toLowerCase();
+  if (q.length < 2) { renderDD(null); return; }
+  renderDD(idx.filter(p => p.player_name && p.player_name.toLowerCase().includes(q)).slice(0, 8));
+});
+
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { const f = dd.querySelector('.dd-item'); if (f) f.click(); return; }
+  if (e.key === 'Escape') { renderDD(null); input.blur(); }
+  if (e.key === 'ArrowDown') { const i = dd.querySelector('.dd-item'); if (i) { i.focus(); e.preventDefault(); } }
+});
+
+dd.addEventListener('keydown', e => {
+  const items = [...dd.querySelectorAll('.dd-item')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown' && i < items.length - 1) { items[i+1].focus(); e.preventDefault(); }
+  if (e.key === 'ArrowUp') { if (i > 0) items[i-1].focus(); else input.focus(); e.preventDefault(); }
+  if (e.key === 'Escape') { renderDD(null); input.focus(); }
+});
+
+document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) renderDD(null); });
+
+// ── SHUFFLE ───────────────────────────────────────────────────────────────────
+const btn   = document.getElementById('btn-shuffle');
+const frame = document.getElementById('profile-frame');
+
+btn.addEventListener('click', async () => {
+  btn.disabled = true;
+  btn.textContent = '⟳ Loading...';
+  try {
+    const res  = await fetch('/api/random-player');
+    const data = await res.json();
+    if (data.slug) {
+      frame.src = '/player/' + encodeURIComponent(data.slug) + '?embed=true';
+      const link = document.getElementById('jonah-player-link');
+      link.textContent = data.name;
+      link.href = '/player/' + encodeURIComponent(data.slug);
+      document.getElementById('jonah-defect').textContent = data.jonah_defect;
+    }
+  } catch(e) { console.error('Shuffle error', e); }
+  finally { btn.disabled = false; btn.innerHTML = '&#8635; New Player'; }
+});
+</script>
+</body>
+</html>

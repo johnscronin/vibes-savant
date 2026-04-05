@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vibes Front Office Tool — Color Scale Audit</title>
+<style>
+  body { background:#0d0d1a; color:#e0e0ef; font-family:'SF Mono',monospace; padding:2rem; }
+  h1   { color:#d5539b; margin-bottom:.5rem; }
+  h2   { color:#99c9ea; margin-top:2rem; margin-bottom:.75rem; }
+  p    { color:rgba(255,255,255,0.65); font-size:.85rem; margin:.25rem 0 .75rem; }
+  table { border-collapse:collapse; margin-bottom:2rem; }
+  th,td { padding:.4rem .9rem; border:1px solid rgba(255,255,255,0.12); font-size:.82rem; }
+  th    { background:rgba(255,255,255,0.07); color:#99c9ea; }
+
+  /* Gauge simulation */
+  .gauge-row { display:flex; flex-wrap:wrap; gap:.75rem; margin-bottom:1.5rem; }
+  .gauge { width:110px; }
+  .gauge-label { font-size:.7rem; color:rgba(255,255,255,0.65); margin-bottom:.25rem; text-align:center; }
+  .pbar-track  { height:8px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden; }
+  .pbar-fill   { height:100%; border-radius:4px; }
+  .pbar-value  { display:block; font-size:.72rem; font-weight:600; text-align:center; margin-top:.2rem; }
+
+  /* Cell shading preview */
+  .cell-top10 { background: rgba(213, 83, 155, 0.18) !important; }
+  .cell-bot10 { background: rgba(153, 201, 234, 0.22) !important; }
+  .cell-demo  { width:60px; height:28px; display:inline-block; border:1px solid rgba(255,255,255,0.15);
+                text-align:center; line-height:28px; font-size:.82rem; }
+</style>
+</head>
+<body>
+
+<h1>Vibes Front Office Tool — Color Scale Audit</h1>
+<p>Generated 2026-03-27. Audits pctColor, barFillColor, ghostBarColor, cell shading, and inverted stat directions.</p>
+
+<h2>1. RGB Table — pctColor at Key Percentiles</h2>
+<table>
+  <tr><th>Percentile</th><th>pctColor (raw)</th><th>barFillColor (mid-range overridden)</th><th>ghostBarColor (DNQ, 35% opacity)</th></tr>
+  <tr><td>1st</td>  <td>rgb(155,202,234)</td><td>rgb(155,202,234)</td>         <td>rgba(155,202,234,0.35)</td></tr>
+  <tr><td>10th</td> <td>rgb(173,212,238)</td><td>rgb(173,212,238)</td>         <td>rgba(173,212,238,0.35)</td></tr>
+  <tr><td>25th</td> <td>rgb(204,228,244)</td><td>rgb(204,228,244)</td>         <td>rgba(204,228,244,0.35)</td></tr>
+  <tr><td>38th</td> <td>rgb(231,242,250)</td><td>rgba(153,183,210,0.9) ✦</td> <td>rgba(153,183,210,0.35) ✦</td></tr>
+  <tr><td>50th</td> <td>rgb(255,255,255)</td><td>rgba(153,183,210,0.9) ✦</td> <td>rgba(153,183,210,0.35) ✦</td></tr>
+  <tr><td>62nd</td> <td>rgb(245,213,231)</td><td>rgba(153,183,210,0.9) ✦</td> <td>rgba(153,183,210,0.35) ✦</td></tr>
+  <tr><td>75th</td> <td>rgb(234,167,204)</td><td>rgb(234,167,204)</td>         <td>rgba(234,167,204,0.35)</td></tr>
+  <tr><td>90th</td> <td>rgb(221,115,173)</td><td>rgb(221,115,173)</td>         <td>rgba(221,115,173,0.35)</td></tr>
+  <tr><td>99th</td> <td>rgb(213,83,155)</td> <td>rgb(213,83,155)</td>          <td>rgba(213,83,155,0.35)</td></tr>
+</table>
+<p>✦ pct 38–62 uses muted steel blue (rgba(153,183,210,0.9)) to avoid near-white fills that disappear on dark backgrounds.</p>
+
+<h2>2. Live Gauge Bar Preview</h2>
+<p>Each bar is rendered exactly as it appears in the player page. Ghost bars (DNQ, dashed outline) shown at right of each pair.</p>
+<div id="gauge-preview" class="gauge-row"></div>
+
+<h2>3. Cell Shading Preview — Top 10% (pink) / Bottom 10% (blue)</h2>
+<p>Used in Advanced, Splits, and Playoffs tabs. Rare stats: only top-10% pink is applied (no bottom blue); value of 0 never highlighted.</p>
+<div>
+  <span class="cell-demo cell-top10">Top 10%</span>&nbsp;&nbsp;
+  <span class="cell-demo">Normal</span>&nbsp;&nbsp;
+  <span class="cell-demo cell-bot10">Bot 10%</span>
+</div>
+<br>
+<table>
+  <tr><th>Class</th><th>CSS Background</th><th>Purpose</th></tr>
+  <tr><td>.cell-top10</td><td>rgba(213, 83, 155, 0.18)</td><td>Top 10% — good batting / good inverted pitching</td></tr>
+  <tr><td>.cell-bot10</td><td>rgba(153, 201, 234, 0.22)</td><td>Bottom 10% — poor batting / poor inverted pitching</td></tr>
+</table>
+
+<h2>4. Inverted Stats Audit</h2>
+<p>For gauge bars: low value = high stored percentile (inverted at compute time in calculate_percentiles.py). Pink = 99th pct always = BEST.
+For shadeCell/shadePO: invert=true means val≤p10 → pink, val≥p90 → blue.</p>
+<table>
+  <tr><th>Stat</th><th>Tab</th><th>invert=true?</th><th>Correct direction?</th></tr>
+  <tr><td>ERA</td>       <td>Gauge / Advanced Pit</td><td>Gauge: stored inverted; adv_pit: invert=true</td><td>✓ Low ERA → pink</td></tr>
+  <tr><td>WHIP</td>      <td>Gauge / Advanced Pit</td><td>Gauge: stored inverted; adv_pit: invert=true</td><td>✓ Low WHIP → pink</td></tr>
+  <tr><td>BAA</td>       <td>Advanced Pit</td><td>invert=true</td><td>✓ Low BAA → pink</td></tr>
+  <tr><td>BB/6 (pit)</td><td>Advanced Pit / HQ Pit</td><td>invert=true</td><td>✓ Low BB/6 → pink</td></tr>
+  <tr><td>BB% (pit)</td> <td>Advanced Pit / HQ Pit</td><td>invert=true</td><td>✓ Low BB% → pink</td></tr>
+  <tr><td>SO (bat)</td>  <td>Splits, Playoffs</td><td>invert=true in shadeCell/shadePO</td><td>✓ Low SO → pink</td></tr>
+  <tr><td>K% (bat)</td>  <td>Advanced Bat</td><td>invert=true in bat_cell</td><td>✓ Low K% → pink</td></tr>
+  <tr><td>AB/HR</td>     <td>Advanced Bat</td><td>invert=true in bat_cell</td><td>✓ Low AB/HR (more HR) → pink</td></tr>
+  <tr><td>ERA+</td>      <td>Advanced Pit</td><td>invert=false</td><td>✓ High ERA+ (>100) → pink</td></tr>
+  <tr><td>OPS+</td>      <td>Advanced Bat</td><td>invert=false</td><td>✓ High OPS+ → pink</td></tr>
+  <tr><td>LOB%</td>      <td>Advanced Pit</td><td>invert=false</td><td>✓ High LOB% → pink</td></tr>
+</table>
+
+<h2>5. Rare Stats Rule</h2>
+<p>Stats where league median == 0 (e.g., HR in small playoff pools, triples, saves). Only top-10% pink applied; no bottom-10% blue. Value of 0 never highlighted.</p>
+<table>
+  <tr><th>Rule</th><th>Condition</th></tr>
+  <tr><td>p10 stored as None</td><td>median == 0 → no bottom 10% threshold</td></tr>
+  <tr><td>No highlight on 0</td><td>rare=true AND val == 0 → no class applied</td></tr>
+  <tr><td>Top-10% still works</td><td>rare=true AND val &gt; 0 AND val &gt;= p90 → cell-top10</td></tr>
+</table>
+
+<script>
+function pctColor(pct) {
+  const blue=[153,201,234],white=[255,255,255],pink=[213,83,155];
+  let r,g,b;
+  if (pct<=50) {
+    const t=pct/50;
+    r=Math.round(blue[0]+(white[0]-blue[0])*t);
+    g=Math.round(blue[1]+(white[1]-blue[1])*t);
+    b=Math.round(blue[2]+(white[2]-blue[2])*t);
+  } else {
+    const t=(pct-50)/49;
+    r=Math.round(white[0]+(pink[0]-white[0])*t);
+    g=Math.round(white[1]+(pink[1]-white[1])*t);
+    b=Math.round(white[2]+(pink[2]-white[2])*t);
+  }
+  return `rgb(${r},${g},${b})`;
+}
+function barFillColor(pct) {
+  if (pct>=38&&pct<=62) return 'rgba(153,183,210,0.9)';
+  return pctColor(pct);
+}
+function ghostBarColor(pct) {
+  if (pct>=38&&pct<=62) return 'rgba(153,183,210,0.35)';
+  const c = pctColor(pct);
+  return c.replace('rgb(','rgba(').replace(')',',0.35)');
+}
+function barTextColor(pct) { return pct<=50?'#2a7db5':'#c23087'; }
+
+const row = document.getElementById('gauge-preview');
+[1,5,10,20,30,40,50,60,70,80,90,95,99].forEach(p => {
+  const col = document.createElement('div');
+  col.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px';
+
+  // Qualified bar
+  const g1 = document.createElement('div');
+  g1.className = 'gauge';
+  const fill1 = barFillColor(p);
+  const tcol1 = barTextColor(p);
+  g1.innerHTML = `<div class="gauge-label">${p}th</div>
+    <div class="pbar-track"><div class="pbar-fill" style="width:${p}%;background:${fill1}"></div></div>
+    <span class="pbar-value" style="color:${tcol1}">${p}</span>`;
+
+  // Ghost (DNQ) bar
+  const g2 = document.createElement('div');
+  g2.className = 'gauge';
+  g2.style.cssText='border:1px dashed rgba(255,255,255,0.25);border-radius:6px;padding:2px';
+  const fill2 = ghostBarColor(p);
+  g2.innerHTML = `<div class="gauge-label" style="font-size:.62rem;color:rgba(255,255,255,0.35)">DNQ</div>
+    <div class="pbar-track"><div class="pbar-fill" style="width:${p}%;background:${fill2}"></div></div>
+    <span class="pbar-value" style="color:rgba(255,255,255,0.3)">${p}</span>`;
+
+  col.appendChild(g1);
+  col.appendChild(g2);
+  row.appendChild(col);
+});
+</script>
+</body>
+</html>

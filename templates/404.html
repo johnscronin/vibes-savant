@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Player Not Found — Vibes Front Office Tool{% endblock %}
+{% block content %}
+<section style="padding: 80px 0; text-align: center;">
+  <div class="container" style="max-width:600px;">
+    <img src="{{ mascot_url }}" alt="Toasty" style="width:80px;height:80px;object-fit:contain;margin-bottom:24px;opacity:0.5;" onerror="this.style.display='none'">
+    <h1 style="font-family:var(--font-display);font-size:3rem;color:var(--muted);margin-bottom:8px;">Player Not Found</h1>
+    {% if query %}
+    <p style="color:var(--muted);margin-bottom:24px;">No player matching <strong style="color:var(--text);">{{ query }}</strong>. Try searching below.</p>
+    {% else %}
+    <p style="color:var(--muted);margin-bottom:24px;">This page doesn't exist. Try searching for a player.</p>
+    {% endif %}
+    <form action="/search" method="get" style="display:flex;gap:8px;justify-content:center;max-width:400px;margin:0 auto;">
+      <input name="q" type="text" value="{{ query }}" placeholder="Search any HRL player…"
+             style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);font-size:0.9rem;outline:none;"
+             autofocus>
+      <button type="submit" style="padding:10px 20px;background:var(--pink);color:#fff;border:none;border-radius:6px;font-family:var(--font-heading);font-weight:600;cursor:pointer;">Search</button>
+    </form>
+    <p style="margin-top:24px;"><a href="/" style="color:var(--blue);">← Back to Home</a></p>
+  </div>
+</section>
+{% endblock %}

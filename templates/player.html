@@ -1,0 +1,2169 @@
+{% extends "base.html" %}
+{% block title %}{{ player.nickname }} — Vibes Front Office Tool{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/gauges.css') }}">
+{% if embed %}
+<style>
+  html, body {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+  main {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* Hide absolutely everything except col-2 percentile bars */
+  nav, .navbar, header, .site-header,
+  footer, .footer, .site-footer,
+  .stat-tabs, .tabs-section, .tab-content, .tab-pane,
+  .player-stats-section,
+  .career-trends-section, .trends-section,
+  .hero-identity, .hero-trends,
+  [class*="stat-table"], [class*="tab-panel"] {
+    display: none !important;
+    height: 0 !important;
+    visibility: hidden !important;
+  }
+
+  /* Hero section fills viewport */
+  .player-page-hero {
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  .player-page-hero .container {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .player-page-hero .container > div:first-child:not(.player-hero-grid) {
+    display: none !important;
+  }
+
+  /* Grid: hide col-1 and col-3, col-2 fills everything */
+  .player-hero-grid {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Col-2: percentile bars fill full iframe */
+  .hero-percentiles {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 14px 20px 10px 20px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Tighten bar sizes so more stats fit vertically */
+  .pct-header-row    { margin-bottom: 4px !important; }
+  .pct-title         { font-size: 11px !important; }
+  .pct-season-select { font-size: 10px !important; padding: 1px 3px !important; }
+  .pct-toggle-row    { margin-bottom: 4px !important; }
+  .pct-toggle        { font-size: 10px !important; padding: 3px 7px !important; }
+  .qualifier-context-note { font-size: 9px !important; margin-top: 2px !important; }
+  .pct-subheader     { font-size: 10px !important; margin: 4px 0 2px !important; }
+  .pct-ref-wrap      { margin-bottom: 2px !important; }
+  .gauge-row         { margin-bottom: 2px !important; }
+  .gauge-label       { font-size: 10px !important; }
+  .gauge-bar-wrap    { height: 14px !important; }
+  .gauge-pct-label   { font-size: 9px !important; }
+
+  .embed-view-full { display: block !important; }
+</style>
+{% else %}
+<style>
+  .embed-view-full { display: none !important; }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# ── Compute helpers ──────────────────────────────────────── #}
+{% set sorted_bat = batting | sort(attribute='season', reverse=True) %}
+{% set sorted_pit = pitching_active | sort(attribute='season', reverse=True) %}
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 1 — THREE-COLUMN HERO
+     ══════════════════════════════════════════════════════════ -->
+<section class="player-page-hero">
+  <div class="container">
+    {% if same_name_players %}
+    <div style="background:#fff8e1;border:1px solid #f59e0b;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:0.85rem;color:#92400e;">
+      &#9888; There {{ 'is' if same_name_players|length == 1 else 'are' }} {{ same_name_players|length }} other player{{ '' if same_name_players|length == 1 else 's' }} named <strong>{{ player.nickname }}</strong> in HRL history.
+      {% for other in same_name_players %}
+      <a href="/player/{{ other.hashtag }}" style="color:#b45309;font-weight:600;text-decoration:underline;">{{ other.hashtag }}{% if other.team_name %} ({{ other.team_name }}{% if other.last_year %}, {{ other.last_year }}{% endif %}){% endif %}</a>{% if not loop.last %}, {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="player-hero-grid">
+
+      <!-- ── COLUMN 1: Player Identity ─────────────────── -->
+      <div class="hero-identity">
+
+        <img src="{{ player.pic_url }}"
+             alt="{{ player.nickname }}"
+             class="player-circle-photo"
+             onerror="this.onerror=null; this.src='{% if is_vibes %}{{ mascot_url }}{% else %}/static/avatars/{{ player.hashtag }}.svg{% endif %}'">
+
+        <h1 class="identity-name">{{ player.nickname }}</h1>
+        <div class="identity-team">{{ player.team_name }} &mdash; HRL Twin Cities</div>
+
+        <!-- Batting mini-table: last 3 seasons + Career -->
+        {% if batting %}
+        <div class="identity-stats-label">Batting</div>
+        <table class="identity-mini-table">
+          <thead>
+            <tr>
+              <th>Season</th>
+              <th>G</th><th>PA</th><th>H</th><th>HR</th>
+              <th>AVG</th><th>OBP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in sorted_bat %}
+            {% if loop.index <= 3 %}
+            <tr class="{{ 'recent-row' if loop.first else '' }}">
+              <td>{{ row.season }}</td>
+              <td>{{ row.games or 0 }}</td>
+              <td>{{ row.pa or '—' }}</td>
+              <td>{{ row.h or 0 }}</td>
+              <td>{{ row.hr or 0 }}</td>
+              <td>{{ '%.3f'|format(row.avg) if row.avg else '.000' }}</td>
+              <td>{{ '%.3f'|format(row.obp) if row.obp else '.000' }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            <tr class="career-row">
+              <td>Career ({{ career_bat.seasons or batting|length }})</td>
+              <td>{{ career_bat.g or 0 }}</td>
+              <td>{{ career_bat.pa or '—' }}</td>
+              <td>{{ career_bat.h or 0 }}</td>
+              <td>{{ career_bat.hr or 0 }}</td>
+              <td>{{ '%.3f'|format(career_bat.avg) if career_bat.avg else '.000' }}</td>
+              <td>{{ '%.3f'|format((career_bat.h + career_bat.bb) / career_bat.pa) if career_bat.pa and career_bat.pa > 0 else '.000' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        {% endif %}
+
+        <!-- Pitching mini-table (if applicable) -->
+        {% if pitching_active %}
+        <div class="identity-stats-label">Pitching</div>
+        <table class="identity-mini-table">
+          <thead>
+            <tr>
+              <th>Season</th>
+              <th>IP</th><th>W</th><th>L</th><th>K</th>
+              <th>ERA</th><th>WHIP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in sorted_pit %}
+            {% if loop.index <= 3 %}
+            <tr class="{{ 'recent-row' if loop.first else '' }}">
+              <td>{{ row.season }}</td>
+              <td>{{ '%.1f'|format(row.ip) if row.ip else '0.0' }}</td>
+              <td>{{ row.w or 0 }}</td>
+              <td>{{ row.l or 0 }}</td>
+              <td>{{ row.k or 0 }}</td>
+              <td>{{ '%.2f'|format(row.era) if row.era is not none else '—' }}</td>
+              <td>{{ '%.2f'|format(row.whip) if row.whip is not none else '—' }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            <tr class="career-row">
+              <td>Career ({{ career_pit.seasons or pitching_active|length }})</td>
+              <td>{{ '%.1f'|format(career_pit.ip) if career_pit.ip else '0.0' }}</td>
+              <td>{{ career_pit.w or 0 }}</td>
+              <td>{{ career_pit.l or 0 }}</td>
+              <td>{{ career_pit.k or 0 }}</td>
+              <td>{{ '%.2f'|format(career_pit.era) if career_pit.era is not none else '—' }}</td>
+              <td>{{ '%.2f'|format(career_pit.whip) if career_pit.whip is not none else '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+        {% endif %}
+
+      </div><!-- /hero-identity -->
+
+      <!-- ── COLUMN 2: Percentile Rankings ─────────────── -->
+      <div class="hero-percentiles">
+        {% if pct_seasons %}
+        <div class="pct-header-row">
+          <div class="pct-title">
+            <span id="pct-season-label">{{ default_season }}</span> Season HRL Percentile Rankings<span id="pct-context-suffix"></span>
+          </div>
+          <select class="pct-season-select" id="gauges-year" onchange="loadGauges()">
+            {% for s in pct_seasons %}
+            <option value="{{ s }}" {% if s == default_season %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="pct-toggle-row">
+          <button class="pct-toggle active" id="gauge-btn-overall" onclick="setGaugeContext('overall')">Overall</button>
+          <button class="pct-toggle" id="gauge-btn-hq" onclick="setGaugeContext('hq')">
+            vs HQ Opponents ⓘ
+            <div class="hq-info-tooltip" id="hq-info-tooltip">
+              <div class="hq-tip-batting" id="hq-tip-batting">
+                <div class="hq-tip-title">Performance vs HQ Pitchers</div>
+                <div class="hq-tip-desc" id="hq-tip-pit-desc">Top 20% of pitchers by WHIP</div>
+                <div class="hq-tip-range" id="hq-tip-pit-range"></div>
+                <div class="hq-tip-count" id="hq-tip-pit-count"></div>
+                <div class="hq-tip-min">Minimum 15 PA</div>
+              </div>
+              <div class="hq-tip-divider" id="hq-tip-divider" style="display:none"></div>
+              <div class="hq-tip-pitching" id="hq-tip-pitching" style="display:none">
+                <div class="hq-tip-title">Performance vs HQ Batters</div>
+                <div class="hq-tip-desc" id="hq-tip-bat-desc">Top 20% of batters by OPS</div>
+                <div class="hq-tip-range" id="hq-tip-bat-range"></div>
+                <div class="hq-tip-count" id="hq-tip-bat-count"></div>
+                <div class="hq-tip-min">Minimum 15 BF</div>
+              </div>
+            </div>
+          </button>
+        </div>
+        <div class="qualifier-context-note" id="hq-context-note" style="font-size:12px;font-family:var(--font-body,'IBM Plex Sans',sans-serif);font-style:italic;color:#9ca3af;margin-top:4px;">HQ Pitchers = Top 20% of Pitchers by WHIP &middot; HQ Batters = Top 20% of Batters by OPS</div>
+
+        <!-- Overall view: Batting + Pitching -->
+        <div id="gauge-overall-wrap">
+          <div class="pct-subheader">Batting</div>
+          <div class="pct-ref-wrap">
+            <div class="pct-ref-overlay" aria-hidden="true">
+              <span class="pct-ref-lbl pct-ref-lbl-5  pct-ref-5" >Below Avg</span>
+              <span class="pct-ref-lbl pct-ref-lbl-50 pct-ref-50">League Avg</span>
+              <span class="pct-ref-lbl pct-ref-lbl-95 pct-ref-95">Above Avg</span>
+              <div class="pct-ref-line pct-ref-5" ></div>
+              <div class="pct-ref-line pct-ref-50"></div>
+              <div class="pct-ref-line pct-ref-95"></div>
+            </div>
+            <div class="gauges-row" id="gauge-batting-row">
+              <div class="muted" style="font-size:0.82rem">Loading…</div>
+            </div>
+          </div>
+
+          <div id="gauge-pitching-section" style="display:none">
+            <div class="pct-divider"></div>
+            <div class="pct-subheader">Pitching</div>
+            <div class="pct-ref-wrap">
+              <div class="pct-ref-overlay" aria-hidden="true">
+                <span class="pct-ref-lbl pct-ref-lbl-5  pct-ref-5" >Below Avg</span>
+                <span class="pct-ref-lbl pct-ref-lbl-50 pct-ref-50">League Avg</span>
+                <span class="pct-ref-lbl pct-ref-lbl-95 pct-ref-95">Above Avg</span>
+                <div class="pct-ref-line pct-ref-5" ></div>
+                <div class="pct-ref-line pct-ref-50"></div>
+                <div class="pct-ref-line pct-ref-95"></div>
+              </div>
+              <div class="gauges-row" id="gauge-pitching-row"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HQ view: vs HQ Pitchers (batting) + vs HQ Batters (pitching) -->
+        <div id="gauge-hq-section" style="display:none">
+          <div class="pct-subheader" id="gauge-hq-label">Batting Percentile Rankings vs HQ Pitchers</div>
+          <div class="muted" id="gauge-hq-pool-subtitle" style="font-size:0.78rem;margin-top:-4px;margin-bottom:4px;"></div>
+          <div id="hq-pa-chip" style="margin-bottom:0.4rem"></div>
+          <div class="pct-ref-wrap">
+            <div class="pct-ref-overlay" aria-hidden="true">
+              <span class="pct-ref-lbl pct-ref-lbl-5  pct-ref-5" >Below Avg</span>
+              <span class="pct-ref-lbl pct-ref-lbl-50 pct-ref-50">League Avg</span>
+              <span class="pct-ref-lbl pct-ref-lbl-95 pct-ref-95">Above Avg</span>
+              <div class="pct-ref-line pct-ref-5" ></div>
+              <div class="pct-ref-line pct-ref-50"></div>
+              <div class="pct-ref-line pct-ref-95"></div>
+            </div>
+            <div class="gauges-row" id="gauge-hq-row"></div>
+          </div>
+          <div id="gauge-hq-batters-section" style="display:none">
+            <div class="pct-divider"></div>
+            <div class="pct-subheader" id="gauge-hq-batters-label">Pitching Percentile Rankings vs HQ Batters</div>
+            <div class="muted" id="gauge-hq-pit-pool-subtitle" style="font-size:0.78rem;margin-top:-4px;margin-bottom:4px;"></div>
+            <div id="hq-bf-chip" style="margin-bottom:0.4rem"></div>
+            <div class="pct-ref-wrap">
+              <div class="pct-ref-overlay" aria-hidden="true">
+                <span class="pct-ref-lbl pct-ref-lbl-5  pct-ref-5" >Below Avg</span>
+                <span class="pct-ref-lbl pct-ref-lbl-50 pct-ref-50">League Avg</span>
+                <span class="pct-ref-lbl pct-ref-lbl-95 pct-ref-95">Above Avg</span>
+                <div class="pct-ref-line pct-ref-5" ></div>
+                <div class="pct-ref-line pct-ref-50"></div>
+                <div class="pct-ref-line pct-ref-95"></div>
+              </div>
+              <div class="gauges-row" id="gauge-hq-batters-row"></div>
+            </div>
+          </div>
+        </div>
+
+        {% else %}
+        <div class="muted" style="font-size:0.85rem;padding:1rem 0">No percentile data available.</div>
+        {% endif %}
+        <a class="embed-view-full"
+           href="/player/{{ player.hashtag }}"
+           target="_blank"
+           style="display:none;margin-top:10px;font-family:'IBM Plex Sans',sans-serif;font-size:11px;color:#d5539b;text-decoration:none;display:block;text-align:center;">
+          View Full Profile &#8594;
+        </a>
+      </div><!-- /hero-percentiles -->
+
+      <!-- ── COLUMN 3: Career Trends ────────────────────── -->
+      <div class="hero-trends">
+        <div class="trends-header-row">
+          <span class="trends-title">Career Trends</span>
+          <select id="trend-stat-select" class="trend-stat-select" onchange="loadTrend()">
+            <optgroup label="Standard Batting">
+              <option value="hr">HR</option>
+              <option value="avg">AVG</option>
+              <option value="obp">OBP</option>
+              <option value="slg">SLG</option>
+              <option value="ops">OPS</option>
+              <option value="rbi">RBI</option>
+              <option value="bb">BB</option>
+              <option value="so">SO</option>
+            </optgroup>
+            <optgroup label="Advanced Batting">
+              <option value="ops_plus">OPS+</option>
+              <option value="iso">ISO</option>
+              <option value="bat_babip">BABIP</option>
+              <option value="rc">Runs Created</option>
+              <option value="bb_pct">BB%</option>
+              <option value="k_pct">K%</option>
+              <option value="bb_k">BB/K</option>
+              <option value="ab_hr">AB/HR</option>
+            </optgroup>
+            {% if pitching_active %}
+            <optgroup label="Standard Pitching">
+              <option value="era">ERA</option>
+              <option value="whip">WHIP</option>
+              <option value="w">W</option>
+              <option value="k">K</option>
+              <option value="ip">IP</option>
+              <option value="bb_per_6">BB/6</option>
+            </optgroup>
+            <optgroup label="Advanced Pitching">
+              <option value="era_plus">ERA+</option>
+              <option value="k_per_6">K/6</option>
+              <option value="hr_per_6">HR/6</option>
+              <option value="pit_k_pct">K% (pitcher)</option>
+              <option value="pit_bb_pct">BB% (pitcher)</option>
+              <option value="pit_babip">BABIP (pitcher)</option>
+              <option value="lob_pct">LOB%</option>
+            </optgroup>
+            {% endif %}
+          </select>
+        </div>
+        <div class="trend-chart-wrap">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div><!-- /hero-trends -->
+
+    </div><!-- /player-hero-grid -->
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 2 — STAT TABLES
+     ══════════════════════════════════════════════════════════ -->
+<section class="player-stats-section section">
+  <div class="container">
+
+    <!-- Sticky tab bar -->
+    <div class="stats-tab-bar" id="player-tabs">
+      <button class="tab active" data-tab="batting">Batting</button>
+      <button class="tab" data-tab="pitching">Pitching</button>
+      <button class="tab" data-tab="fielding">Fielding</button>
+      <button class="tab" data-tab="advanced">Advanced</button>
+      <button class="tab" data-tab="splits">Splits</button>
+      <button class="tab" data-tab="playoffs">Playoffs</button>
+    </div>
+
+    <div class="stats-tab-content">
+
+      <!-- ── Batting ── -->
+      <div class="tab-panel active" id="tab-batting">
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th class="num sortable">Year</th>
+                <th class="sortable">Team</th>
+                <th class="num sortable">G</th>
+                <th class="num sortable">PA</th>
+                <th class="num sortable">AB</th>
+                <th class="num sortable">R</th>
+                <th class="num sortable">H</th>
+                <th class="num sortable">2B</th>
+                <th class="num sortable">3B</th>
+                <th class="num sortable">HR</th>
+                <th class="num sortable">RBI</th>
+                <th class="num sortable">BB</th>
+                <th class="num sortable">SO</th>
+                <th class="num sortable">AVG</th>
+                <th class="num sortable">OBP</th>
+                <th class="num sortable">SLG</th>
+                <th class="num sortable">OPS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set max_season = batting | map(attribute='season') | max if batting else 0 %}
+              {% for row in batting %}
+              {% set bt = league_thresholds.get(row.season, {}).get('batting', {}) %}
+              <tr class="{% if row.team_name == 'Vibes' %}vibes-season-row{% endif %} {% if row.season == max_season %}latest-season-row{% endif %}">
+                <td class="num">{{ row.season }}</td>
+                <td>{{ row.team_name }}</td>
+                <td class="num">{{ row.games or '—' }}</td>
+                <td class="num">{{ row.pa or '—' }}</td>
+                <td class="num">{{ row.ab or '—' }}</td>
+                {%- macro bat_cell(val, stat, invert=false) -%}
+                  {%- set t = bt.get(stat, {}) -%}
+                  {%- if val is not none and t -%}
+                    {%- set rare = t.get('rare', false) -%}
+                    {%- if not invert -%}
+                      {%- if t.get('p90') is not none and val >= t.get('p90') and (not rare or val > 0) -%}
+                        {%- set cls = 'cell-top10' -%}
+                      {%- elif not rare and t.get('p10') is not none and val <= t.get('p10') -%}
+                        {%- set cls = 'cell-bot10' -%}
+                      {%- else -%}
+                        {%- set cls = '' -%}
+                      {%- endif -%}
+                    {%- else -%}
+                      {%- if t.get('p10') is not none and val <= t.get('p10') and (not rare or val > 0) -%}
+                        {%- set cls = 'cell-top10' -%}
+                      {%- elif not rare and t.get('p90') is not none and val >= t.get('p90') -%}
+                        {%- set cls = 'cell-bot10' -%}
+                      {%- else -%}
+                        {%- set cls = '' -%}
+                      {%- endif -%}
+                    {%- endif -%}
+                  {%- else -%}
+                    {%- set cls = '' -%}
+                  {%- endif -%}
+                  <td class="num {{ cls }}">
+                {%- endmacro -%}
+                {{ bat_cell(row.r, 'r') }}{{ row.r or 0 }}</td>
+                {{ bat_cell(row.h, 'h') }}{{ row.h or 0 }}</td>
+                {{ bat_cell(row.doubles, 'doubles') }}{{ row.doubles or 0 }}</td>
+                {{ bat_cell(row.triples, 'triples') }}{{ row.triples or 0 }}</td>
+                {{ bat_cell(row.hr, 'hr') }}{{ row.hr or 0 }}</td>
+                {{ bat_cell(row.rbi, 'rbi') }}{{ row.rbi or 0 }}</td>
+                {{ bat_cell(row.bb, 'bb') }}{{ row.bb or 0 }}</td>
+                {{ bat_cell(row.so, 'so', invert=true) }}{{ row.so or 0 }}</td>
+                {{ bat_cell(row.avg, 'avg') }}{{ '%.3f'|format(row.avg) if row.avg else '.000' }}</td>
+                {{ bat_cell(row.obp, 'obp') }}{{ '%.3f'|format(row.obp) if row.obp else '.000' }}</td>
+                {{ bat_cell(row.slg, 'slg') }}{{ '%.3f'|format(row.slg) if row.slg else '.000' }}</td>
+                {{ bat_cell(row.ops, 'ops') }}{{ '%.3f'|format(row.ops) if row.ops else '.000' }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="17" class="empty-row">No batting data</td></tr>
+              {% endfor %}
+            </tbody>
+            {% if batting | length > 1 %}
+            <tfoot>
+              <tr class="totals-row">
+                <td class="num">—</td><td>Career</td>
+                <td class="num">{{ career_bat.g or 0 }}</td>
+                <td class="num">{{ career_bat.pa or '—' }}</td>
+                <td class="num">{{ career_bat.ab or 0 }}</td>
+                <td class="num">{{ career_bat.r or 0 }}</td>
+                <td class="num">{{ career_bat.h or 0 }}</td>
+                <td class="num">{{ career_bat.doubles or 0 }}</td>
+                <td class="num">{{ career_bat.triples or 0 }}</td>
+                <td class="num">{{ career_bat.hr or 0 }}</td>
+                <td class="num">{{ career_bat.rbi or 0 }}</td>
+                <td class="num">{{ career_bat.bb or 0 }}</td>
+                <td class="num">{{ career_bat.so or 0 }}</td>
+                <td class="num">{{ '%.3f'|format(career_bat.avg) if career_bat.avg else '.000' }}</td>
+                <td class="num">—</td><td class="num">—</td><td class="num">—</td>
+              </tr>
+            </tfoot>
+            {% endif %}
+          </table>
+        </div>
+        <div class="highlight-legend">
+          <span class="hl-swatch hl-pink"></span><span>Top 10% of league</span>
+          <span class="hl-swatch hl-blue" style="margin-left:1rem"></span><span>Bottom 10% of league</span>
+        </div>
+      </div>
+
+      <!-- ── Pitching ── -->
+      <div class="tab-panel" id="tab-pitching">
+        {% if pitching_active %}
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th class="num sortable">Year</th>
+                <th class="sortable">Team</th>
+                <th class="num sortable">G</th>
+                <th class="num sortable">GS</th>
+                <th class="num sortable">W</th>
+                <th class="num sortable">L</th>
+                <th class="num sortable">SV</th>
+                <th class="num sortable">IP</th>
+                <th class="num sortable">H</th>
+                <th class="num sortable">R</th>
+                <th class="num sortable">HR</th>
+                <th class="num sortable">BB</th>
+                <th class="num sortable">K</th>
+                <th class="num sortable">ERA</th>
+                <th class="num sortable">WHIP</th>
+                <th class="num sortable">BAA</th>
+                <th class="num sortable">K/6</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set max_pit_season = pitching_active | map(attribute='season') | max if pitching_active else 0 %}
+              {% for row in pitching_active %}
+              {% set pt = league_thresholds.get(row.season, {}).get('pitching', {}) %}
+              <tr class="{% if row.team_name == 'Vibes' %}vibes-season-row{% endif %} {% if row.season == max_pit_season %}latest-season-row{% endif %}">
+                <td class="num">{{ row.season }}</td>
+                <td>{{ row.team_name }}</td>
+                <td class="num">{{ row.g or 0 }}</td>
+                <td class="num">{{ row.gs or 0 }}</td>
+                <td class="num">{{ row.w or 0 }}</td>
+                <td class="num">{{ row.l or 0 }}</td>
+                <td class="num">{{ row.sv or 0 }}</td>
+                {%- macro pit_cell(val, stat, invert=false) -%}
+                  {%- set t = pt.get(stat, {}) -%}
+                  {%- if val is not none and t -%}
+                    {%- set rare = t.get('rare', false) -%}
+                    {%- if not invert -%}
+                      {%- if t.get('p90') is not none and val >= t.get('p90') and (not rare or val > 0) -%}
+                        {%- set cls = 'cell-top10' -%}
+                      {%- elif not rare and t.get('p10') is not none and val <= t.get('p10') -%}
+                        {%- set cls = 'cell-bot10' -%}
+                      {%- else -%}
+                        {%- set cls = '' -%}
+                      {%- endif -%}
+                    {%- else -%}
+                      {%- if t.get('p10') is not none and val <= t.get('p10') and (not rare or val > 0) -%}
+                        {%- set cls = 'cell-top10' -%}
+                      {%- elif not rare and t.get('p90') is not none and val >= t.get('p90') -%}
+                        {%- set cls = 'cell-bot10' -%}
+                      {%- else -%}
+                        {%- set cls = '' -%}
+                      {%- endif -%}
+                    {%- endif -%}
+                  {%- else -%}
+                    {%- set cls = '' -%}
+                  {%- endif -%}
+                  <td class="num {{ cls }}">
+                {%- endmacro -%}
+                {{ pit_cell(row.ip, 'ip') }}{{ '%.1f'|format(row.ip) if row.ip else '0.0' }}</td>
+                {{ pit_cell(row.ha, 'h', invert=true) }}{{ row.ha or 0 }}</td>
+                <td class="num">{{ row.opp_r or 0 }}</td>
+                {{ pit_cell(row.opp_hr, 'hr', invert=true) }}{{ row.opp_hr or 0 }}</td>
+                {{ pit_cell(row.opp_bb, 'bb', invert=true) }}{{ row.opp_bb or 0 }}</td>
+                {{ pit_cell(row.k, 'k') }}{{ row.k or 0 }}</td>
+                {{ pit_cell(row.era, 'era', invert=true) }}{{ '%.2f'|format(row.era) if row.era is not none else '—' }}</td>
+                {{ pit_cell(row.whip, 'whip', invert=true) }}{{ '%.2f'|format(row.whip) if row.whip is not none else '—' }}</td>
+                {{ pit_cell(row.baa, 'baa', invert=true) }}{{ '%.3f'|format(row.baa) if row.baa else '.000' }}</td>
+                {{ pit_cell(row.k_per_6, 'k_per_6') }}{{ '%.2f'|format(row.k_per_6) if row.k_per_6 else '0.00' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            {% if pitching_active | length > 1 %}
+            <tfoot>
+              <tr>
+                <td class="num">—</td><td>Career</td>
+                <td class="num">{{ career_pit.g or 0 }}</td><td class="num">—</td>
+                <td class="num">{{ career_pit.w or 0 }}</td>
+                <td class="num">{{ career_pit.l or 0 }}</td>
+                <td class="num">{{ career_pit.sv or 0 }}</td>
+                <td class="num">{{ '%.1f'|format(career_pit.ip) if career_pit.ip else '0.0' }}</td>
+                <td class="num">{{ career_pit.ha or 0 }}</td>
+                <td class="num">{{ career_pit.opp_r or 0 }}</td>
+                <td class="num">—</td>
+                <td class="num">{{ career_pit.bb or 0 }}</td>
+                <td class="num">{{ career_pit.k or 0 }}</td>
+                <td class="num">{{ '%.2f'|format(career_pit.era) if career_pit.era is not none else '—' }}</td>
+                <td class="num">{{ '%.2f'|format(career_pit.whip) if career_pit.whip is not none else '—' }}</td>
+                <td class="num">—</td><td class="num">—</td>
+              </tr>
+            </tfoot>
+            {% endif %}
+          </table>
+        </div>
+        <div class="highlight-legend">
+          <span class="hl-swatch hl-pink"></span><span>Top 10% of league</span>
+          <span class="hl-swatch hl-blue" style="margin-left:1rem"></span><span>Bottom 10% of league</span>
+        </div>
+        {% else %}
+        <div class="empty-panel"><p class="muted">No pitching appearances recorded.</p></div>
+        {% endif %}
+      </div>
+
+      <!-- ── Fielding ── -->
+      <div class="tab-panel" id="tab-fielding">
+        {% if fielding %}
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th class="num sortable">Year</th>
+                <th class="sortable">Team</th>
+                <th class="num sortable">Chances</th>
+                <th class="num sortable">PO</th>
+                <th class="num sortable">E</th>
+                <th class="num sortable">FLD%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set max_fld_season = fielding | map(attribute='season') | max if fielding else 0 %}
+              {% for row in fielding %}
+              <tr class="{% if row.team_name == 'Vibes' %}vibes-season-row{% endif %} {% if row.season == max_fld_season %}latest-season-row{% endif %}">
+                <td class="num">{{ row.season }}</td>
+                <td>{{ row.team_name }}</td>
+                <td class="num">{{ row.chances or 0 }}</td>
+                <td class="num">{{ row.put_outs or 0 }}</td>
+                <td class="num">{{ row.errors or 0 }}</td>
+                <td class="num">{{ '%.3f'|format(row.fld_pct) if row.fld_pct else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-panel"><p class="muted">No fielding data.</p></div>
+        {% endif %}
+      </div>
+
+      <!-- ── Advanced Stats ── -->
+      <div class="tab-panel" id="tab-advanced">
+        {% if custom_seasons %}
+        {% set max_adv_season = custom_seasons | map(attribute='season') | max if custom_seasons else 0 %}
+
+        <div class="adv-subheader">Batting — Advanced Metrics</div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th class="num sortable">Year</th>
+                <th class="sortable">Team</th>
+                <th class="num sortable" title="OPS normalized to league average. 100 = league average, higher is better.">OPS+</th>
+                <th class="num sortable" title="Isolated Power (ISO) measures raw power — how often a player hits for extra bases beyond singles. Higher ISO = more extra base hits.">ISO</th>
+                <th class="num sortable" title="Batting Average on Balls in Play — rate at which balls in play become hits. Higher is generally better for batters.">BABIP</th>
+                <th class="num sortable" title="Runs Created estimates how many runs a player contributed. Formula: (Hits + Walks) × Total Bases / (At Bats + Walks)">RC</th>
+                <th class="num sortable" title="Walk Rate (BB%). Higher is better.">BB%</th>
+                <th class="num sortable" title="Strikeout Rate (K%). Lower is better.">K%</th>
+                <th class="num sortable" title="Walk-to-strikeout ratio. Above 1.0 = more walks than strikeouts.">BB/K</th>
+                <th class="num sortable" title="At-Bats per Home Run. Lower is better.">AB/HR</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in custom_seasons %}
+              {% set bat_row = batting | selectattr('season', 'equalto', row.season) | first | default(none) %}
+              {% set team = bat_row.team_name if bat_row else '—' %}
+              {% set ab = league_thresholds.get(row.season, {}).get('batting', {}) %}
+              {%- macro adv_bat(val, stat, invert=false) -%}
+                {%- set t = ab.get(stat, {}) -%}
+                {%- if val is not none and t -%}
+                  {%- set rare = t.get('rare', false) -%}
+                  {%- if not invert -%}
+                    {%- if t.get('p90') is not none and val >= t.get('p90') and (not rare or val > 0) -%}{%- set cls = 'cell-top10' -%}
+                    {%- elif not rare and t.get('p10') is not none and val <= t.get('p10') -%}{%- set cls = 'cell-bot10' -%}
+                    {%- else -%}{%- set cls = '' -%}{%- endif -%}
+                  {%- else -%}
+                    {%- if t.get('p10') is not none and val <= t.get('p10') and (not rare or val > 0) -%}{%- set cls = 'cell-top10' -%}
+                    {%- elif not rare and t.get('p90') is not none and val >= t.get('p90') -%}{%- set cls = 'cell-bot10' -%}
+                    {%- else -%}{%- set cls = '' -%}{%- endif -%}
+                  {%- endif -%}
+                {%- else -%}{%- set cls = '' -%}{%- endif -%}
+                <td class="num {{ cls }}">
+              {%- endmacro -%}
+              <tr class="{% if team == 'Vibes' %}vibes-season-row{% endif %} {% if row.season == max_adv_season %}latest-season-row{% endif %}">
+                <td class="num">{{ row.season }}</td>
+                <td>{{ team }}</td>
+                <td class="num {% if row.ops_plus is not none %}{% if row.ops_plus >= 110 %}stat-leader-blue{% elif row.ops_plus < 90 %}below-avg-stat{% endif %}{% endif %}">
+                  {% if row.ops_plus is not none %}{{ row.ops_plus | int }}{% else %}<span class="muted">DNQ</span>{% endif %}
+                </td>
+                {{ adv_bat(row.iso, 'iso') }}{{ '%.3f'|format(row.iso) if row.iso is not none else '—' }}</td>
+                {{ adv_bat(row.bat_babip, 'bat_babip') }}{{ '%.3f'|format(row.bat_babip) if row.bat_babip is not none else '—' }}</td>
+                <td class="num">{{ '%.1f'|format(row.rc) if row.rc is not none else '—' }}</td>
+                {{ adv_bat(row.bb_pct, 'bb_pct') }}{% if row.bb_pct is not none %}{{ '%.1f'|format(row.bb_pct * 100) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+                {{ adv_bat(row.k_pct, 'k_pct', invert=true) }}{% if row.k_pct is not none %}{{ '%.1f'|format(row.k_pct * 100) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+                {{ adv_bat(row.bb_k, 'bb_k') }}{{ '%.2f'|format(row.bb_k) if row.bb_k is not none else '—' }}</td>
+                {{ adv_bat(row.ab_hr, 'ab_hr', invert=true) }}{{ '%.1f'|format(row.ab_hr) if row.ab_hr is not none else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="highlight-legend"><span class="hl-swatch hl-pink"></span>Top 10% of league&nbsp;&nbsp;<span class="hl-swatch hl-blue"></span>Bottom 10% of league</div>
+
+        {% if pitching_active %}
+        <div class="adv-subheader">Pitching — Advanced Metrics</div>
+        <div class="table-wrap">
+          <table class="stats-table">
+            <thead>
+              <tr>
+                <th class="num sortable">Year</th>
+                <th class="sortable">Team</th>
+                <th class="num sortable" title="ERA normalized to league average. 100 = league average, higher is better.">ERA+</th>
+                <th class="num sortable" title="Batting Average Against — how often opposing batters get a hit. Lower is better.">BAA</th>
+                <th class="num sortable" title="Batting Average on Balls in Play — rate at which balls in play become hits. Lower is better for pitchers.">BABIP</th>
+                <th class="num sortable" title="Left on Base Percentage — percentage of baserunners a pitcher strands. Higher is better.">LOB%</th>
+                <th class="num sortable" title="Pitcher Strikeout Rate — frequency with which the pitcher strikes out a batter. Higher is better.">K%</th>
+                <th class="num sortable" title="Pitcher Walk Rate — frequency with which the pitcher issues a walk. Lower is better.">BB%</th>
+                <th class="num sortable" title="Strikeouts per 6 innings pitched.">K/6</th>
+                <th class="num sortable" title="Walks allowed per 6 innings pitched.">BB/6</th>
+                <th class="num sortable" title="Home runs allowed per 6 innings pitched. Lower is better.">HR/6</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in custom_seasons %}
+              {% set pit_row = pitching | selectattr('season', 'equalto', row.season) | first | default(none) %}
+              {% set team = pit_row.team_name if pit_row else '—' %}
+              {% set ap = league_thresholds.get(row.season, {}).get('pitching', {}) %}
+              {%- macro adv_pit(val, stat, invert=false) -%}
+                {%- set t = ap.get(stat, {}) -%}
+                {%- if val is not none and t -%}
+                  {%- set rare = t.get('rare', false) -%}
+                  {%- if not invert -%}
+                    {%- if t.get('p90') is not none and val >= t.get('p90') and (not rare or val > 0) -%}{%- set cls = 'cell-top10' -%}
+                    {%- elif not rare and t.get('p10') is not none and val <= t.get('p10') -%}{%- set cls = 'cell-bot10' -%}
+                    {%- else -%}{%- set cls = '' -%}{%- endif -%}
+                  {%- else -%}
+                    {%- if t.get('p10') is not none and val <= t.get('p10') and (not rare or val > 0) -%}{%- set cls = 'cell-top10' -%}
+                    {%- elif not rare and t.get('p90') is not none and val >= t.get('p90') -%}{%- set cls = 'cell-bot10' -%}
+                    {%- else -%}{%- set cls = '' -%}{%- endif -%}
+                  {%- endif -%}
+                {%- else -%}{%- set cls = '' -%}{%- endif -%}
+                <td class="num {{ cls }}">
+              {%- endmacro -%}
+              {% if pit_row and pit_row.ip %}
+              <tr class="{% if team == 'Vibes' %}vibes-season-row{% endif %} {% if row.season == max_adv_season %}latest-season-row{% endif %}">
+                <td class="num">{{ row.season }}</td>
+                <td>{{ team }}</td>
+                <td class="num {% if row.era_plus is not none %}{% if row.era_plus >= 110 %}stat-leader-blue{% elif row.era_plus < 90 %}below-avg-stat{% endif %}{% endif %}">
+                  {% if row.era_plus is not none %}{{ row.era_plus | int }}{% else %}<span class="muted">—</span>{% endif %}
+                </td>
+                {{ adv_pit(pit_row.baa, 'baa', invert=true) }}{{ '%.3f'|format(pit_row.baa) if pit_row.baa is not none else '—' }}</td>
+                {{ adv_pit(row.pit_babip, 'pit_babip', invert=true) }}{{ '%.3f'|format(row.pit_babip) if row.pit_babip is not none else '—' }}</td>
+                {{ adv_pit(row.lob_pct, 'lob_pct') }}{% if row.lob_pct is not none %}{{ '%.1f'|format(row.lob_pct * 100) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+                {{ adv_pit(row.pit_k_pct, 'pit_k_pct') }}{% if row.pit_k_pct is not none %}{{ '%.1f'|format(row.pit_k_pct * 100) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+                {{ adv_pit(row.pit_bb_pct, 'pit_bb_pct', invert=true) }}{% if row.pit_bb_pct is not none %}{{ '%.1f'|format(row.pit_bb_pct * 100) }}%{% else %}<span class="muted">—</span>{% endif %}</td>
+                {{ adv_pit(row.k_per_6, 'k_per_6') }}{{ '%.2f'|format(row.k_per_6) if row.k_per_6 is not none else '—' }}</td>
+                {{ adv_pit(row.bb_per_6, 'bb_per_6', invert=true) }}{{ '%.2f'|format(row.bb_per_6) if row.bb_per_6 is not none else '—' }}</td>
+                {{ adv_pit(row.hr_per_6, 'hr_per_6', invert=true) }}{{ '%.2f'|format(row.hr_per_6) if row.hr_per_6 is not none else '—' }}</td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="highlight-legend"><span class="hl-swatch hl-pink"></span>Top 10% of league&nbsp;&nbsp;<span class="hl-swatch hl-blue"></span>Bottom 10% of league</div>
+        {% endif %}
+
+        <div class="adv-legend">
+          <span class="adv-leg-item"><span class="adv-dot above"></span>≥110 above avg</span>
+          <span class="adv-leg-item"><span class="adv-dot avg"></span>90–110 avg</span>
+          <span class="adv-leg-item"><span class="adv-dot below"></span>&lt;90 below avg</span>
+          <span class="adv-leg-item muted" style="margin-left:1rem">DNQ = did not meet qualifier</span>
+        </div>
+        {% else %}
+        <div class="empty-panel"><p class="muted">No advanced stats available.</p></div>
+        {% endif %}
+      </div>
+
+      <!-- ── Splits ── -->
+      <div class="tab-panel" id="tab-splits">
+        <div id="splits-loading" class="muted" style="font-size:0.85rem;padding:1.5rem 0">Loading splits…</div>
+        <div id="splits-content" style="display:none">
+
+          <!-- HQ Pitcher Splits (batting) -->
+          <div class="percentile-section" id="splits-hq-bat-section">
+            <div class="percentile-section-title">vs. HQ Pitchers <span class="muted" style="font-size:0.75rem;font-weight:400" id="splits-hq-pit-subtitle">(top 20% by WHIP, min 15 PA)</span></div>
+            <div id="splits-hq-sample-chip"></div>
+            <div id="splits-hq-gauges" class="gauges-row" style="margin-bottom:0.75rem;max-width:500px"></div>
+            <div class="table-wrap">
+              <table class="stats-table" id="splits-hq-table">
+                <thead><tr>
+                  <th class="num sortable">Year</th>
+                  <th class="num sortable">PA</th><th class="num sortable">AB</th>
+                  <th class="num sortable">H</th><th class="num sortable">2B</th><th class="num sortable">3B</th>
+                  <th class="num sortable">HR</th><th class="num sortable">RBI</th>
+                  <th class="num sortable">BB</th><th class="num sortable">SO</th>
+                  <th class="num sortable">AVG</th><th class="num sortable">OBP</th>
+                  <th class="num sortable">SLG</th><th class="num sortable">OPS</th>
+                </tr></thead>
+                <tbody id="splits-hq-tbody"></tbody>
+              </table>
+            </div>
+            <div id="splits-hq-empty" class="muted" style="display:none;font-size:0.85rem;padding:0.5rem 0">HQ batting splits not available (requires batter vs. pitcher matchup data)</div>
+          </div>
+
+          <!-- HQ Batter Splits (pitching) -->
+          <div class="percentile-section" id="splits-hq-pit-section" style="display:none;margin-top:1.5rem">
+            <div class="percentile-section-title">vs. HQ Batters <span class="muted" style="font-size:0.75rem;font-weight:400">(top 20% by OPS, min 15 BF)</span></div>
+            <div class="table-wrap">
+              <table class="stats-table" id="splits-hq-pit-table">
+                <thead><tr>
+                  <th class="num sortable">Year</th>
+                  <th class="num sortable">BF</th>
+                  <th class="num sortable">ERA</th>
+                  <th class="num sortable">OBP Ag.</th>
+                  <th class="num sortable">BAA</th>
+                  <th class="num sortable">K/6</th>
+                  <th class="num sortable">BB/6</th>
+                </tr></thead>
+                <tbody id="splits-hq-pit-tbody"></tbody>
+              </table>
+            </div>
+            <div id="splits-hq-pit-empty" class="muted" style="display:none;font-size:0.85rem;padding:0.5rem 0">No HQ batter matchup data available</div>
+          </div>
+
+          <!-- Batting Tier Splits -->
+          <div class="percentile-section" id="splits-tier-bat-section" style="margin-top:1.5rem">
+            <div class="percentile-section-title">Batting by Opponent Tier</div>
+            <div class="tier-def-row">
+              <span><span class="tier-chip tier-chip-elite">Elite</span><span class="tier-def-text">Top-tier teams (top win% group)</span></span>
+              <span><span class="tier-chip tier-chip-average">Average</span><span class="tier-def-text">Mid-tier teams (middle win% group)</span></span>
+              <span><span class="tier-chip tier-chip-weak">Weak</span><span class="tier-def-text">Weak teams (bottom win% group)</span></span>
+            </div>
+            <div class="tier-controls-row">
+              <div id="splits-tier-filter" class="tier-filter-btns"></div>
+              <select id="splits-tier-season" class="tier-season-select">
+                <option value="">All Seasons</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table class="stats-table sortable-table" id="splits-tier-table">
+                <thead><tr>
+                  <th class="num sortable" data-col="season">Year</th>
+                  <th class="sortable" data-col="tier">Tier</th>
+                  <th class="num sortable" data-col="g">G</th>
+                  <th class="num sortable" data-col="pa">PA</th>
+                  <th class="num sortable" data-col="ab">AB</th>
+                  <th class="num sortable" data-col="avg">AVG</th><th class="num sortable" data-col="obp">OBP</th>
+                  <th class="num sortable" data-col="slg">SLG</th><th class="num sortable" data-col="ops">OPS</th>
+                  <th class="num sortable" data-col="hr">HR</th><th class="num sortable" data-col="rbi">RBI</th>
+                  <th class="num sortable" data-col="bb">BB</th>
+                  <th class="num sortable" data-col="so">SO</th>
+                </tr></thead>
+                <tbody id="splits-tier-tbody"></tbody>
+              </table>
+            </div>
+            <div id="splits-tier-bat-empty" class="muted" style="display:none;font-size:0.85rem;padding:0.5rem 0">Batting tier splits not available (requires batter vs. pitcher matchup data)</div>
+          </div>
+
+          <!-- Pitching Tier Splits -->
+          <div class="percentile-section" id="splits-tier-pit-section" style="display:none;margin-top:1.5rem">
+            <div class="percentile-section-title">Pitching by Opponent Tier</div>
+            <div class="tier-def-row">
+              <span><span class="tier-chip tier-chip-elite">Elite</span><span class="tier-def-text">Top-tier opponents (top win% group)</span></span>
+              <span><span class="tier-chip tier-chip-average">Average</span><span class="tier-def-text">Mid-tier opponents (middle win% group)</span></span>
+              <span><span class="tier-chip tier-chip-weak">Weak</span><span class="tier-def-text">Weak opponents (bottom win% group)</span></span>
+            </div>
+            <div class="tier-controls-row">
+              <div id="splits-pit-tier-filter" class="tier-filter-btns"></div>
+              <select id="splits-pit-tier-season" class="tier-season-select">
+                <option value="">All Seasons</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table class="stats-table sortable-table" id="splits-pit-tier-table">
+                <thead><tr>
+                  <th class="num sortable" data-col="season">Year</th>
+                  <th class="sortable" data-col="tier">Tier</th>
+                  <th class="num sortable" data-col="pa">PA Ag.</th>
+                  <th class="num sortable" data-col="ab">AB Ag.</th>
+                  <th class="num sortable" data-col="avg">BAA</th>
+                  <th class="num sortable" data-col="obp">OBP Ag.</th>
+                  <th class="num sortable" data-col="slg">SLG Ag.</th>
+                  <th class="num sortable" data-col="ops">OPS Ag.</th>
+                  <th class="num sortable" data-col="hr">HR Ag.</th>
+                  <th class="num sortable" data-col="bb">BB Ag.</th>
+                  <th class="num sortable" data-col="so">SO</th>
+                </tr></thead>
+                <tbody id="splits-pit-tier-tbody"></tbody>
+              </table>
+            </div>
+            <div id="splits-tier-pit-empty" class="muted" style="display:none;font-size:0.85rem;padding:0.5rem 0">No pitching tier split data available</div>
+          </div>
+
+          <!-- Playoff stats in splits tab -->
+          <div class="percentile-section" style="margin-top:1.5rem">
+            <div class="percentile-section-title">Playoffs <span class="muted" style="font-size:0.75rem;font-weight:400">(career totals)</span></div>
+            <div id="splits-playoff-content">
+              <div id="splits-playoff-empty" class="muted" style="font-size:0.85rem;padding:0.5rem 0">No playoff data available</div>
+              <div id="splits-playoff-table-wrap" class="table-wrap" style="display:none">
+                <table class="stats-table">
+                  <thead><tr>
+                    <th>Period</th>
+                    <th class="num">PA</th><th class="num">AB</th><th class="num">H</th>
+                    <th class="num">2B</th><th class="num">3B</th><th class="num">HR</th>
+                    <th class="num">RBI</th><th class="num">BB</th><th class="num">SO</th>
+                    <th class="num">AVG</th><th class="num">OBP</th>
+                    <th class="num">SLG</th><th class="num">OPS</th>
+                  </tr></thead>
+                  <tbody id="splits-playoff-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Playoffs ── -->
+      <div class="tab-panel" id="tab-playoffs">
+        <div id="playoffs-loading" class="muted" style="font-size:0.85rem;padding:1.5rem 0">Loading playoff data…</div>
+        <div id="playoffs-content" style="display:none">
+
+          <div class="percentile-section">
+            <div class="percentile-section-title">Career Playoff Batting <span class="muted" style="font-size:0.75rem;font-weight:400">(career totals, min 25 PA to qualify)</span></div>
+            <div class="gauges-row" id="playoffs-gauges-row" style="margin-bottom:0.75rem;max-width:500px"></div>
+            <div class="table-wrap">
+              <table class="stats-table" id="playoffs-bat-table">
+                <thead><tr>
+                  <th class="num">Period</th>
+                  <th class="num sortable">PA</th>
+                  <th class="num sortable">AB</th>
+                  <th class="num sortable">G</th>
+                  <th class="num sortable">H</th>
+                  <th class="num sortable">2B</th>
+                  <th class="num sortable">3B</th>
+                  <th class="num sortable">HR</th>
+                  <th class="num sortable">RBI</th>
+                  <th class="num sortable">BB</th>
+                  <th class="num sortable">SO</th>
+                  <th class="num sortable">AVG</th>
+                  <th class="num sortable">OBP</th>
+                  <th class="num sortable">SLG</th>
+                  <th class="num sortable">OPS</th>
+                </tr></thead>
+                <tbody id="playoffs-bat-tbody"></tbody>
+              </table>
+            </div>
+            <div id="playoffs-bat-empty" class="muted" style="display:none;font-size:0.85rem;padding:0.5rem 0">No playoff batting data available</div>
+          </div>
+
+          <div class="percentile-section" style="margin-top:1.5rem" id="playoffs-hq-section">
+            <div class="percentile-section-title">vs. HQ Pitchers in Playoffs <span class="muted" style="font-size:0.75rem;font-weight:400">(combined reg+playoff, bottom 15% WHIP, min 15 PA)</span></div>
+            <div class="table-wrap">
+              <table class="stats-table" id="playoffs-hq-table">
+                <thead><tr>
+                  <th class="num sortable">Year</th>
+                  <th class="num sortable">PA</th><th class="num sortable">AB</th>
+                  <th class="num sortable">H</th><th class="num sortable">2B</th><th class="num sortable">3B</th>
+                  <th class="num sortable">HR</th><th class="num sortable">RBI</th>
+                  <th class="num sortable">BB</th><th class="num sortable">SO</th>
+                  <th class="num sortable">AVG</th><th class="num sortable">OBP</th>
+                  <th class="num sortable">SLG</th><th class="num sortable">OPS</th>
+                </tr></thead>
+                <tbody id="playoffs-hq-tbody"></tbody>
+              </table>
+            </div>
+            <div id="playoffs-hq-empty" class="muted" style="display:none;font-size:0.85rem;padding:0.5rem 0">No HQ pitcher matchups found (min 10 PA required)</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /stats-tab-content -->
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════
+     SECTION 3 — COMING SOON
+     ══════════════════════════════════════════════════════════ -->
+<section class="player-coming-soon">
+  <div class="container">
+    <div class="coming-soon-grid">
+
+      <!-- Spray Chart -->
+      <div class="coming-soon-col">
+        <h3>Spray Chart</h3>
+        <p class="coming-sub">Coming 2026</p>
+        <div class="coming-svg-wrap">
+          <svg width="200" height="210" viewBox="0 0 200 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Pink flame left -->
+            <path d="M54 180 Q32 155 42 122 Q39 138 50 132 Q36 117 47 95 Q57 114 52 128 Q63 112 59 138 Q66 124 72 131 Q59 155 54 180Z" fill="#d5539b" opacity="0.85"/>
+            <!-- Blue flame right -->
+            <path d="M146 180 Q168 155 158 122 Q161 138 150 132 Q164 117 153 95 Q143 114 148 128 Q137 112 141 138 Q134 124 128 131 Q141 155 146 180Z" fill="#99c9ea" opacity="0.85"/>
+            <!-- Toast body -->
+            <rect x="62" y="90" width="76" height="88" rx="11" fill="#f5c842"/>
+            <!-- Toast crust top -->
+            <path d="M62 100 Q100 68 138 100 L138 90 Q100 58 62 90Z" fill="#d4981e"/>
+            <!-- Toast face bg -->
+            <rect x="65" y="100" width="70" height="75" rx="8" fill="#f9d96a"/>
+            <!-- Eyes -->
+            <ellipse cx="87" cy="128" rx="7" ry="8" fill="white"/>
+            <ellipse cx="113" cy="128" rx="7" ry="8" fill="white"/>
+            <circle cx="89" cy="129" r="4" fill="#111"/>
+            <circle cx="115" cy="129" r="4" fill="#111"/>
+            <circle cx="90" cy="127" r="1.5" fill="white"/>
+            <circle cx="116" cy="127" r="1.5" fill="white"/>
+            <!-- Cheeks -->
+            <ellipse cx="79" cy="140" rx="6" ry="4" fill="#f4a261" opacity="0.5"/>
+            <ellipse cx="121" cy="140" rx="6" ry="4" fill="#f4a261" opacity="0.5"/>
+            <!-- Smile -->
+            <path d="M87 148 Q100 160 113 148" stroke="#c8851a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- Hard hat brim -->
+            <ellipse cx="100" cy="93" rx="48" ry="10" fill="#e6c000"/>
+            <!-- Hard hat dome -->
+            <path d="M58 93 Q58 60 100 58 Q142 60 142 93Z" fill="#FFD700"/>
+            <!-- Hard hat stripe -->
+            <path d="M62 84 Q100 76 138 84" stroke="white" stroke-width="2.5" fill="none" opacity="0.35"/>
+            <!-- Arm -->
+            <path d="M135 148 Q152 138 163 128" stroke="#d4981e" stroke-width="7" stroke-linecap="round" fill="none"/>
+            <!-- Construction sign -->
+            <rect x="156" y="112" width="40" height="30" rx="4" fill="#FF8C00"/>
+            <rect x="158" y="114" width="36" height="26" rx="3" fill="#E07000"/>
+            <line x1="158" y1="114" x2="163" y2="140" stroke="#FFD700" stroke-width="1.5" opacity="0.4"/>
+            <line x1="165" y1="114" x2="175" y2="140" stroke="#FFD700" stroke-width="1.5" opacity="0.4"/>
+            <line x1="174" y1="114" x2="187" y2="140" stroke="#FFD700" stroke-width="1.5" opacity="0.4"/>
+            <text x="176" y="126" font-family="Arial,sans-serif" font-weight="800" font-size="6.5" fill="white" text-anchor="middle">UNDER</text>
+            <text x="176" y="136" font-family="Arial,sans-serif" font-weight="800" font-size="5.5" fill="white" text-anchor="middle">CONSTRUCTION</text>
+          </svg>
+        </div>
+        <p class="coming-text">Spray chart data will populate as game videos are analyzed</p>
+      </div>
+
+      <!-- Pitch Zone Heat Map -->
+      <div class="coming-soon-col">
+        <h3>Pitch Zone Heat Map</h3>
+        <p class="coming-sub">Coming 2026</p>
+        <div class="coming-svg-wrap">
+          <svg width="200" height="210" viewBox="0 0 200 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Pink flame left -->
+            <path d="M54 180 Q32 155 42 122 Q39 138 50 132 Q36 117 47 95 Q57 114 52 128 Q63 112 59 138 Q66 124 72 131 Q59 155 54 180Z" fill="#d5539b" opacity="0.85"/>
+            <!-- Blue flame right -->
+            <path d="M146 180 Q168 155 158 122 Q161 138 150 132 Q164 117 153 95 Q143 114 148 128 Q137 112 141 138 Q134 124 128 131 Q141 155 146 180Z" fill="#99c9ea" opacity="0.85"/>
+            <!-- Toast body -->
+            <rect x="62" y="90" width="76" height="88" rx="11" fill="#f5c842"/>
+            <!-- Toast crust top -->
+            <path d="M62 100 Q100 68 138 100 L138 90 Q100 58 62 90Z" fill="#d4981e"/>
+            <!-- Toast face bg -->
+            <rect x="65" y="100" width="70" height="75" rx="8" fill="#f9d96a"/>
+            <!-- Eyes -->
+            <ellipse cx="87" cy="128" rx="7" ry="8" fill="white"/>
+            <ellipse cx="113" cy="128" rx="7" ry="8" fill="white"/>
+            <circle cx="89" cy="129" r="4" fill="#111"/>
+            <circle cx="115" cy="129" r="4" fill="#111"/>
+            <circle cx="90" cy="127" r="1.5" fill="white"/>
+            <circle cx="116" cy="127" r="1.5" fill="white"/>
+            <!-- Cheeks -->
+            <ellipse cx="79" cy="140" rx="6" ry="4" fill="#f4a261" opacity="0.5"/>
+            <ellipse cx="121" cy="140" rx="6" ry="4" fill="#f4a261" opacity="0.5"/>
+            <!-- Smile -->
+            <path d="M87 148 Q100 160 113 148" stroke="#c8851a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- Hard hat brim -->
+            <ellipse cx="100" cy="93" rx="48" ry="10" fill="#e6c000"/>
+            <!-- Hard hat dome -->
+            <path d="M58 93 Q58 60 100 58 Q142 60 142 93Z" fill="#FFD700"/>
+            <!-- Hard hat stripe -->
+            <path d="M62 84 Q100 76 138 84" stroke="white" stroke-width="2.5" fill="none" opacity="0.35"/>
+            <!-- Arm -->
+            <path d="M135 148 Q152 138 163 128" stroke="#d4981e" stroke-width="7" stroke-linecap="round" fill="none"/>
+            <!-- Construction sign -->
+            <rect x="156" y="112" width="40" height="30" rx="4" fill="#FF8C00"/>
+            <rect x="158" y="114" width="36" height="26" rx="3" fill="#E07000"/>
+            <line x1="158" y1="114" x2="163" y2="140" stroke="#FFD700" stroke-width="1.5" opacity="0.4"/>
+            <line x1="165" y1="114" x2="175" y2="140" stroke="#FFD700" stroke-width="1.5" opacity="0.4"/>
+            <line x1="174" y1="114" x2="187" y2="140" stroke="#FFD700" stroke-width="1.5" opacity="0.4"/>
+            <text x="176" y="126" font-family="Arial,sans-serif" font-weight="800" font-size="6.5" fill="white" text-anchor="middle">UNDER</text>
+            <text x="176" y="136" font-family="Arial,sans-serif" font-weight="800" font-size="5.5" fill="white" text-anchor="middle">CONSTRUCTION</text>
+          </svg>
+        </div>
+        <p class="coming-text">Pitch zone data will populate as game videos are analyzed</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Player nav -->
+<section class="section">
+  <div class="container">
+    <div class="player-nav">
+      {% for name in all_players %}
+      <a href="/player/{{ name }}"
+         class="player-nav-chip {% if name == player.hashtag %}active{% endif %}">
+        {{ display_names.get(name, name) }}
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const _playerName = {{ player.hashtag | tojson }};
+
+// ── Tab switching ─────────────────────────────────────────
+document.querySelectorAll('#player-tabs .tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('#player-tabs .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'playoffs' && !playoffsLoaded) loadPlayoffs();
+    if (tab.dataset.tab === 'splits'   && !splitsLoaded)   loadSplits();
+  });
+});
+
+// ── Table sorting ─────────────────────────────────────────
+document.querySelectorAll('.stats-table').forEach(table => {
+  table.querySelectorAll('thead th.sortable').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const tbody = table.querySelector('tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr:not(.career-row)'));
+      const idx = Array.from(th.closest('tr').children).indexOf(th);
+      const asc = th.classList.toggle('sort-asc');
+      th.closest('thead').querySelectorAll('th').forEach(h => {
+        if (h !== th) { h.classList.remove('sort-asc','sort-desc','sort-active'); }
+      });
+      th.classList.toggle('sort-desc', !asc);
+      th.classList.add('sort-active');
+      rows.sort((a, b) => {
+        const av = a.children[idx]?.textContent.trim().replace(/[^\d.\-]/g,'') || '';
+        const bv = b.children[idx]?.textContent.trim().replace(/[^\d.\-]/g,'') || '';
+        const an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn)) return asc ? an-bn : bn-an;
+        return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+      });
+      rows.forEach(r => tbody.appendChild(r));
+    });
+  });
+});
+
+// ── Colour helpers ────────────────────────────────────────
+function pctColor(pct) {
+  const blue  = [153, 201, 234];
+  const white = [255, 255, 255];
+  const pink  = [213,  83, 155];
+  let r, g, b;
+  if (pct <= 50) {
+    const t = pct / 50;
+    r = Math.round(blue[0] + (white[0]-blue[0])*t);
+    g = Math.round(blue[1] + (white[1]-blue[1])*t);
+    b = Math.round(blue[2] + (white[2]-blue[2])*t);
+  } else {
+    const t = (pct - 50) / 49;
+    r = Math.round(white[0] + (pink[0]-white[0])*t);
+    g = Math.round(white[1] + (pink[1]-white[1])*t);
+    b = Math.round(white[2] + (pink[2]-white[2])*t);
+  }
+  return `rgb(${r},${g},${b})`;
+}
+function barFillColor(pct) {
+  // Avoid near-white fills in the mid range
+  if (pct >= 38 && pct <= 62) return 'rgba(153,183,210,0.9)';
+  return pctColor(pct);
+}
+function ghostBarColor(pct) {
+  // Same gradient as barFillColor but at 35% opacity for DNQ ghost bars
+  if (pct >= 38 && pct <= 62) return 'rgba(153,183,210,0.35)';
+  const c = pctColor(pct);  // 'rgb(r,g,b)'
+  return c.replace('rgb(', 'rgba(').replace(')', ', 0.35)');
+}
+function barTextColor(pct) {
+  return pct <= 50 ? '#2a7db5' : '#c23087';
+}
+function circleColor(pct) {
+  // blue #99c9ea → gray #888 → pink #d5539b
+  const blue = [153, 201, 234];
+  const gray = [136, 136, 136];
+  const pink = [213,  83, 155];
+  let r, g, b;
+  if (pct <= 50) {
+    const t = pct / 50;
+    r = Math.round(blue[0] + (gray[0]-blue[0])*t);
+    g = Math.round(blue[1] + (gray[1]-blue[1])*t);
+    b = Math.round(blue[2] + (gray[2]-blue[2])*t);
+  } else {
+    const t = (pct - 50) / 49;
+    r = Math.round(gray[0] + (pink[0]-gray[0])*t);
+    g = Math.round(gray[1] + (pink[1]-gray[1])*t);
+    b = Math.round(gray[2] + (pink[2]-gray[2])*t);
+  }
+  return `rgb(${r},${g},${b})`;
+}
+
+// Stats that display as percentages (stored as 0–1 decimals)
+const PCT_STATS = new Set(['bb_pct','k_pct','pit_k_pct','pit_bb_pct','lob_pct',
+  'hq_bb_pct','hq_k_pct','hqpit_pit_k_pct','hqpit_pit_bb_pct',
+  'hqpit_k_pct','hqpit_bb_pct']);
+
+const STAT_LABELS = {
+  avg:'AVG', obp:'OBP', slg:'SLG', ops:'OPS', hr:'HR',
+  rbi:'RBI', bb:'BB', r:'R', so:'SO',
+  bb_pct:'BB%', k_pct:'K%', bb_k:'BB/K', ab_hr:'AB/HR',
+  era:'ERA', whip:'WHIP', baa:'BAA', k_per_6:'K/6', bb_per_6:'BB/6', hr_per_6:'HR/6', ip:'IP',
+  pit_k_pct:'K%', pit_bb_pct:'BB%', pit_babip:'BABIP',
+  ops_plus:'OPS+', era_plus:'ERA+',
+  hq_ops:'HQ OPS', hq_obp:'HQ OBP', hq_avg:'HQ AVG', hq_slg:'HQ SLG',
+  hq_ab_hr:'HQ AB/HR', hq_bb_pct:'HQ BB%', hq_k_pct:'HQ K%', hq_bb_k:'HQ BB/K',
+  hq_pa:'PA vs HQ', hq_iso:'HQ ISO', hq_babip:'HQ BABIP',
+  hqpit_bf:'BF vs HQ', hqpit_k_pct:'K%', hqpit_bb_pct:'BB%',
+  hqpit_obp:'OBP vs HQ', hqpit_baa:'BAA', hqpit_era:'ERA',
+  hqpit_k_per_6:'K/6', hqpit_bb_per_6:'BB/6',
+};
+
+function fmtStatVal(v, sn) {
+  if (v == null) return '—';
+  const pv = parseFloat(v);
+  if (isNaN(pv)) return '—';
+  // Percentage stats (stored 0-1)
+  if (PCT_STATS.has(sn)) return (pv * 100).toFixed(1) + '%';
+  // Rate stats shown as .312 (strip leading zero when < 1)
+  const _rate3 = new Set(['avg','obp','slg','baa','bat_babip','pit_babip',
+    'hqpit_baa','hqpit_pit_babip','iso','hq_avg','hq_obp','hq_slg',
+    'hqpit_obp','hq_iso','hq_babip']);
+  if (_rate3.has(sn)) { const s = pv.toFixed(3); return (pv < 1 && pv >= 0) ? s.slice(1) : s; }
+  // PA/BF — whole number
+  if (sn === 'hq_pa' || sn === 'hqpit_bf') return String(Math.round(pv));
+  // OPS — 3 decimal, strip leading zero
+  if (['ops','hq_ops','avg_ops','elite_ops','weak_ops'].includes(sn)) {
+    const s = pv.toFixed(3); return (pv < 1 && pv >= 0) ? s.slice(1) : s;
+  }
+  // BB/K — 2 decimal
+  if (sn === 'bb_k' || sn === 'hq_bb_k') return pv.toFixed(2);
+  // AB/HR — 1 decimal
+  if (sn === 'ab_hr' || sn === 'hq_ab_hr') return pv.toFixed(1);
+  // ERA, WHIP — 2 decimal
+  if (['era','whip','hqpit_era','hqpit_whip'].includes(sn)) return pv.toFixed(2);
+  // K/6, BB/6 — 2 decimal
+  if (['k_per_6','bb_per_6','hr_per_6','opp_bb_per_6','hqpit_k_per_6','hqpit_bb_per_6'].includes(sn)) return pv.toFixed(2);
+  // IP — 1 decimal
+  if (sn === 'ip' || sn === 'hqpit_ip') return pv.toFixed(1);
+  // RC — 1 decimal
+  if (sn === 'rc') return pv.toFixed(1);
+  // Whole numbers
+  const _int = new Set(['ops_plus','era_plus',
+    'hr','rbi','k','w','bb','so','h','sv','g']);
+  if (_int.has(sn)) return String(Math.round(pv));
+  return pv.toFixed(3);
+}
+
+function ordinal(n) {
+  if (n == null) return '—';
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// ── Build horizontal bar widget ───────────────────────────
+function buildGauge(stat, dnqContext) {
+  const { stat_name, stat_value, percentile, estimated_percentile, qualified, pool_size, qualifier_text, stat_type } = stat;
+  const widget = document.createElement('div');
+  widget.className = 'pbar-widget';
+  const label  = STAT_LABELS[stat_name] || stat_name.toUpperCase();
+  const rawVal = fmtStatVal(stat_value, stat_name);
+  const poolTypes = {batting:'hitters',pitching:'pitchers',custom:'hitters',splits:'hitters',playoff:'playoff hitters'};
+  const pd = poolTypes[stat_type] || 'players';
+  const isQual = qualified === 1;
+
+  let barInner = '', circleHTML = '', tipText, statValCls = '', estNote = '';
+
+  if (isQual && percentile != null) {
+    const fillCol   = barFillColor(percentile);
+    const badgeCol  = circleColor(percentile);
+    const cLeft     = `clamp(0px, calc(${percentile}% - 16px), calc(100% - 32px))`;
+    barInner   = `<div class="pbar-track"><div class="pbar-fill" style="width:${percentile}%;background:${fillCol}"></div></div>`;
+    circleHTML = `<div class="pbar-circle" style="left:${cLeft};background:${badgeCol}">${percentile}</div>`;
+    tipText    = `${label}: ${rawVal} — ${ordinal(percentile)} percentile among ${pool_size} qualified ${pd}`;
+  } else if (!isQual && estimated_percentile != null) {
+    const fillCol  = barFillColor(estimated_percentile);
+    const badgeCol = circleColor(estimated_percentile);
+    const cLeft    = `clamp(0px, calc(${estimated_percentile}% - 16px), calc(100% - 32px))`;
+    let dnqDesc = 'did not qualify';
+    if (dnqContext) {
+      if (stat_type === 'batting' && dnqContext.player_pa != null && dnqContext.batting_min_pa)
+        dnqDesc = `did not qualify: ${dnqContext.player_pa} PA, required ${dnqContext.batting_min_pa}`;
+      else if (stat_type === 'pitching' && dnqContext.player_ip != null && dnqContext.pitching_min_ip)
+        dnqDesc = `did not qualify: ${dnqContext.player_ip} IP, required ${dnqContext.pitching_min_ip}`;
+    }
+    barInner   = `<div class="pbar-track pbar-ghost"><div class="pbar-fill" style="width:${estimated_percentile}%;background:${fillCol}"></div></div>`;
+    circleHTML = `<div class="pbar-circle pbar-ghost" style="left:${cLeft};background:${badgeCol}">${estimated_percentile}</div>`;
+    statValCls = ' pbar-ghost';
+    estNote    = `<div class="pbar-est-note">Est. — did not qualify</div>`;
+    tipText    = `${label}: ${rawVal} — estimated ${ordinal(estimated_percentile)} percentile (${dnqDesc})`;
+  } else if (!isQual) {
+    barInner = `<div class="pbar-track pbar-track-dnq"></div>`;
+    tipText  = qualifier_text ? `DNQ — ${qualifier_text}` : 'Did not qualify';
+  } else {
+    barInner = `<div class="pbar-track"></div>`;
+    tipText  = 'No data';
+  }
+
+  widget.innerHTML = `
+    <div class="pbar-label">${label}</div>
+    <div class="pbar-stat-val${statValCls}">${rawVal}</div>
+    <div class="pbar-bar-wrap">${barInner}${circleHTML}<div class="pbar-tooltip">${tipText}</div></div>
+    ${estNote}`;
+  return widget;
+}
+
+// ── Gauge toggle state ────────────────────────────────────
+let _gaugeContext = 'overall';
+let _hasPitching  = false;
+
+function setGaugeContext(ctx) {
+  _gaugeContext = ctx;
+  document.getElementById('gauge-btn-overall').classList.toggle('active', ctx==='overall');
+  document.getElementById('gauge-btn-hq').classList.toggle('active', ctx==='hq');
+  const sfx = document.getElementById('pct-context-suffix');
+  if (sfx) sfx.textContent = ctx === 'hq' ? ' \u2014 vs High Quality Opponents' : '';
+  _updateGaugeVis();
+}
+function _updateGaugeVis() {
+  const ow = document.getElementById('gauge-overall-wrap');
+  const ps = document.getElementById('gauge-pitching-section');
+  const hs = document.getElementById('gauge-hq-section');
+  if (_gaugeContext === 'hq') {
+    ow.style.display = 'none';
+    hs.style.display = '';
+  } else {
+    ow.style.display = '';
+    hs.style.display = 'none';
+    ps.style.display = _hasPitching ? '' : 'none';
+  }
+}
+
+async function loadGauges() {
+  const season = document.getElementById('gauges-year')?.value;
+  if (!season) return;
+  document.getElementById('pct-season-label').textContent = season;
+
+  const res  = await fetch(`/api/player/${_playerName}/percentiles?season=${season}`);
+  const data = await res.json();
+
+  const batRow = document.getElementById('gauge-batting-row');
+  const pitRow = document.getElementById('gauge-pitching-row');
+  const hqRow  = document.getElementById('gauge-hq-row');
+  batRow.innerHTML = '';
+  pitRow.innerHTML = '';
+  hqRow.innerHTML  = '';
+
+  const batting  = data.stats.filter(s => s.stat_type === 'batting');
+  const pitching = data.stats.filter(s => s.stat_type === 'pitching');
+  const splits   = data.stats.filter(s => s.stat_type === 'splits');
+
+  // Context for DNQ ghost bar tooltips
+  const dnqCtx = {
+    player_pa:      data.player_pa,
+    player_ip:      data.player_ip,
+    batting_min_pa: data.qualifiers?.batting_min_pa,
+    pitching_min_ip: data.qualifiers?.pitching_min_ip,
+  };
+
+// Batting bars: OPS OBP AVG SLG AB/HR BB% K% BB/K
+  const BAT_ORDER = ['ops','obp','avg','slg','ab_hr','bb_pct','k_pct','bb_k'];
+  BAT_ORDER.forEach(sn => {
+    const s = batting.find(x=>x.stat_name===sn);
+    if (s) batRow.appendChild(buildGauge(s, dnqCtx));
+  });
+
+  // Pitching bars: ERA WHIP K/6 BB/6 K% BB% BAA BABIP IP
+  const PIT_ORDER = ['era','whip','k_per_6','bb_per_6','hr_per_6','pit_k_pct','pit_bb_pct','baa','pit_babip','ip'];
+  _hasPitching = pitching.length > 0;
+  if (_hasPitching) {
+    PIT_ORDER.forEach(sn => {
+      const s = pitching.find(x=>x.stat_name===sn);
+      if (s) pitRow.appendChild(buildGauge(s, dnqCtx));
+    });
+  }
+
+  // HQ splits: vs HQ pitchers batting stats
+  // Supports both new stat_type='vs_hq_pitcher' and legacy stat_type='splits'
+  const vsHqPit = data.stats.filter(s => s.stat_type === 'vs_hq_pitcher' || s.stat_type === 'splits');
+  const HQ_ORDER = ['hq_pa','hq_ops','hq_obp','hq_avg','hq_slg','hq_bb_pct','hq_k_pct','hq_bb_k'];
+  const hqFound = HQ_ORDER.map(sn => vsHqPit.find(x=>x.stat_name===sn)).filter(Boolean);
+
+  // Update HQ batting tooltip with dynamic range info
+  const hqPitDesc = document.getElementById('hq-tip-pit-desc');
+  const hqPitRange = document.getElementById('hq-tip-pit-range');
+  const hqPitCount = document.getElementById('hq-tip-pit-count');
+  if (hqPitDesc) {
+    const pitSource = data.hq_pitcher_source || 'whip_calculated';
+    if (pitSource === 'manual_curation') {
+      hqPitDesc.textContent = `Manually curated elite pitchers in ${season}`;
+      if (hqPitRange) hqPitRange.textContent = `WHIP range: ${data.hq_pitcher_range_min?.toFixed(3) ?? '—'} – ${data.hq_pitcher_range_max?.toFixed(3) ?? '—'}`;
+      if (hqPitCount) hqPitCount.textContent = `${data.hq_pitcher_count ?? '—'} HQ pitchers selected`;
+    } else if (data.hq_pitcher_cutoff_whip != null) {
+      hqPitDesc.textContent = `Top 20% of pitchers by WHIP in ${season}`;
+      if (hqPitRange) hqPitRange.textContent = `WHIP range: ${data.hq_pitcher_range_min?.toFixed(3) ?? '—'} – ${data.hq_pitcher_range_max?.toFixed(3) ?? '—'}`;
+      if (hqPitCount) hqPitCount.textContent = `${data.hq_pitcher_count ?? '—'} qualifying HQ pitchers`;
+    }
+  }
+
+  // Update HQ pitching tooltip with dynamic range info
+  const hqBatDesc = document.getElementById('hq-tip-bat-desc');
+  const hqBatRange = document.getElementById('hq-tip-bat-range');
+  const hqBatCount = document.getElementById('hq-tip-bat-count');
+  if (hqBatDesc && data.hq_batter_cutoff_ops != null) {
+    hqBatDesc.textContent = `Top 20% of batters by OPS in ${season}`;
+    if (hqBatRange) hqBatRange.textContent = `OPS range: ${data.hq_batter_range_min?.toFixed(3) ?? '—'} – ${data.hq_batter_range_max?.toFixed(3) ?? '—'}`;
+    if (hqBatCount) hqBatCount.textContent = `${data.hq_batter_count ?? '—'} qualifying HQ batters`;
+  }
+
+  // Update splits section subtitle based on source
+  const splitsHqPitSub = document.getElementById('splits-hq-pit-subtitle');
+  if (splitsHqPitSub) {
+    const pitSrc = data.hq_pitcher_source || 'whip_calculated';
+    if (pitSrc === 'manual_curation') {
+      splitsHqPitSub.textContent = '(manually curated list, min 15 PA)';
+    } else {
+      splitsHqPitSub.textContent = '(top 20% by WHIP, min 15 PA)';
+    }
+  }
+  // Update context note
+  const hqContextNote = document.getElementById('hq-context-note');
+  if (hqContextNote) {
+    const pitSrc2 = data.hq_pitcher_source || 'whip_calculated';
+    if (pitSrc2 === 'manual_curation') {
+      hqContextNote.textContent = `HQ Pitchers = Manually curated elite pitchers (${season}) \u00B7 HQ Batters = Top 20% of Batters by OPS`;
+    } else {
+      hqContextNote.textContent = 'HQ Pitchers = Top 20% of Pitchers by WHIP \u00B7 HQ Batters = Top 20% of Batters by OPS';
+    }
+  }
+
+  // Update HQ section subtitles with pool sizes
+  const hqBatPoolSub = document.getElementById('gauge-hq-pool-subtitle');
+  if (hqBatPoolSub && data.hq_batting_pool_size != null) {
+    hqBatPoolSub.textContent = `Ranked among ${data.hq_batting_pool_size} qualified batters vs HQ pitchers in ${season}`;
+  }
+  const hqPitPoolSub = document.getElementById('gauge-hq-pit-pool-subtitle');
+  if (hqPitPoolSub && data.hq_pitching_pool_size != null) {
+    hqPitPoolSub.textContent = `Ranked among ${data.hq_pitching_pool_size} qualified pitchers vs HQ batters in ${season}`;
+  }
+
+  // Build PA sample size chip for batting
+  const paVsHq = data.vs_hq_pitcher?.pa ?? 0;
+  const paQualifies = data.vs_hq_pitcher?.qualifies === 1;
+  const hqPaChipEl = document.getElementById('hq-pa-chip');
+  if (hqPaChipEl) {
+    if (paVsHq > 0) {
+      hqPaChipEl.innerHTML = `<span class="hq-sample-chip${paQualifies ? '' : ' hq-sample-chip-dnq'}">PA vs HQ Pitchers: <span class="hq-chip-num">${paVsHq}</span>${paQualifies ? '' : ' <span class="hq-chip-dnq">(DNQ – min 15)</span>'}</span>`;
+    } else {
+      hqPaChipEl.innerHTML = '<span class="hq-sample-chip hq-sample-chip-empty">No recorded matchups vs HQ pitchers this season</span>';
+    }
+  }
+
+  if (hqFound.length > 0) {
+    hqFound.forEach(s => {
+      const g = buildGauge(s, dnqCtx);
+      hqRow.appendChild(g);
+    });
+  } else if (paVsHq === 0) {
+    hqRow.innerHTML = '<span style="font-size:0.82rem;color:#6b7280">No recorded matchups vs HQ pitchers this season</span>';
+  } else {
+    hqRow.innerHTML = '<span style="font-size:0.82rem;color:#6b7280">No HQ pitcher data this season (min 15 PA)</span>';
+  }
+
+  // HQ Batters (pitching): stats for pitchers vs HQ batters
+  // Supports both new stat_type='vs_hq_hitter' and legacy stat_type='hq_pitcher'
+  const hqPitSection = document.getElementById('gauge-hq-batters-section');
+  const hqPitRow     = document.getElementById('gauge-hq-batters-row');
+  const vsHqHit = data.stats.filter(s => s.stat_type === 'vs_hq_hitter' || s.stat_type === 'hq_pitcher');
+  // API returns stat_name values: 'bf','era','k_per_6','bb_per_6','k_pct','bb_pct','baa','obp_against'
+  const HQ_PIT_ORDER = ['bf','era','k_per_6','bb_per_6','k_pct','bb_pct','baa','obp_against'];
+  const HQ_PIT_LABELS = {
+    bf:'BF vs HQ', era:'ERA', k_per_6:'K/6', bb_per_6:'BB/6',
+    k_pct:'K%', bb_pct:'BB%', baa:'BAA', obp_against:'OBP',
+  };
+  const hqPitFound = HQ_PIT_ORDER.map(sn => vsHqHit.find(x=>x.stat_name===sn)).filter(Boolean);
+
+  // Build BF sample size chip for pitching
+  const bfVsHq = data.vs_hq_hitter?.bf ?? 0;
+  const bfQualifies = data.vs_hq_hitter?.qualifies === 1;
+  const hqBfChipEl = document.getElementById('hq-bf-chip');
+  if (hqBfChipEl) {
+    if (bfVsHq > 0) {
+      hqBfChipEl.innerHTML = `<span class="hq-sample-chip${bfQualifies ? '' : ' hq-sample-chip-dnq'}">BF vs HQ Batters: <span class="hq-chip-num">${bfVsHq}</span>${bfQualifies ? '' : ' <span class="hq-chip-dnq">(DNQ – min 15)</span>'}</span>`;
+    } else {
+      hqBfChipEl.innerHTML = '';
+    }
+  }
+
+  if (hqPitFound.length > 0 && _hasPitching) {
+    hqPitRow.innerHTML = '';
+    hqPitFound.forEach(s => {
+      const g = buildGauge(s, dnqCtx);
+      const lbl = g.querySelector('.pbar-label');
+      if (lbl) lbl.textContent = HQ_PIT_LABELS[s.stat_name] || s.stat_name;
+      hqPitRow.appendChild(g);
+    });
+    hqPitSection.style.display = '';
+  } else {
+    hqPitSection.style.display = 'none';
+  }
+
+  if (batting.length === 0) {
+    batRow.innerHTML = '<span style="font-size:0.82rem;color:#6b7280">No batting data this season</span>';
+  }
+  _updateGaugeVis();
+}
+
+// ── Trend Graph ───────────────────────────────────────────
+let trendChart = null;
+
+async function loadTrend() {
+  const stat = document.getElementById('trend-stat-select')?.value || 'hr';
+  const res  = await fetch(`/api/player/${_playerName}/trend?stat=${stat}`);
+  const data = await res.json();
+  const ctx  = document.getElementById('trendChart');
+  if (!ctx) return;
+
+  const labels     = data.map(d => d.season);
+  const values     = data.map(d => d.value);
+  const teams      = data.map(d => d.team);
+  const lgAvgs     = data.map(d => d.league_avg ?? null);
+
+  const STAT_LABELS_T = {
+    avg:'AVG',obp:'OBP',slg:'SLG',ops:'OPS',hr:'HR',rbi:'RBI',bb:'BB',so:'SO',r:'R',
+    era:'ERA',whip:'WHIP',w:'W',k:'K',ip:'IP',bb_per_6:'BB/6',
+    k_per_6:'K/6',ops_plus:'OPS+',era_plus:'ERA+',hr_per_6:'HR/6',
+    ab_hr:'AB/HR',bb_k:'BB/K',
+    bb_pct:'BB%',k_pct:'K%',iso:'ISO',bat_babip:'BABIP',rc:'RC',
+    pit_k_pct:'K% (Pit)',pit_bb_pct:'BB% (Pit)',pit_babip:'BABIP (Pit)',lob_pct:'LOB%',
+  };
+  const yLabel = STAT_LABELS_T[stat] || stat.toUpperCase();
+
+  // Y-axis / tooltip value formatter
+  const _pctStats  = new Set(['bb_pct','k_pct','pit_k_pct','pit_bb_pct','lob_pct']);
+  const _rateStats = new Set(['avg','obp','iso','bat_babip','pit_babip','baa']);
+  const _opsStats  = new Set(['ops','slg']);
+  const _intStats  = new Set(['hr','rbi','bb','so','r','w','k','rc','ip','g']);
+  const _int2Stats = new Set(['ops_plus','era_plus','ab_hr']);
+  function formatTick(v) {
+    if (v == null) return '—';
+    if (_pctStats.has(stat))  return (v * 100).toFixed(1) + '%';
+    if (_rateStats.has(stat)) return v < 1 ? '.' + v.toFixed(3).slice(2) : v.toFixed(3);
+    if (_opsStats.has(stat))  return v.toFixed(3);
+    if (_intStats.has(stat))  return String(Math.round(v));
+    if (_int2Stats.has(stat)) return String(Math.round(v));
+    if (stat === 'era' || stat === 'whip') return v.toFixed(2);
+    if (stat === 'k_per_6' || stat === 'bb_per_6' || stat === 'hr_per_6') return v.toFixed(2);
+    if (stat === 'bb_k') return v.toFixed(2);
+    return v.toFixed(3);
+  }
+
+  const nonNull   = values.filter(v => v != null);
+  const careerAvg = nonNull.length ? parseFloat((nonNull.reduce((a,b)=>a+b,0)/nonNull.length).toFixed(3)) : null;
+  const allVals   = [...nonNull, ...lgAvgs.filter(v=>v!=null), ...(careerAvg!=null?[careerAvg]:[])];
+  const yMin = allVals.length ? Math.min(...allVals) : 0;
+  const yMax = allVals.length ? Math.max(...allVals) : 1;
+  const pad  = (yMax-yMin)*0.18 || 0.05;
+
+  if (trendChart) { trendChart.destroy(); trendChart = null; }
+
+  const hasLgAvg = lgAvgs.some(v=>v!=null);
+  const datasets = [
+    {
+      label: yLabel,
+      data: values,
+      borderColor: '#d5539b',
+      backgroundColor: 'transparent',
+      pointBackgroundColor: '#d5539b',
+      pointBorderColor: '#d5539b',
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      borderWidth: 2.5,
+      tension: 0.3,
+      fill: false,
+      spanGaps: true,
+      order: 1,
+    },
+    ...(hasLgAvg ? [{
+      label: 'League Avg',
+      data: lgAvgs,
+      borderColor: '#99c9ea',
+      borderDash: [6,4],
+      borderWidth: 1.5,
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+      spanGaps: true,
+      order: 2,
+    }] : []),
+    ...(careerAvg != null ? [{
+      label: 'Career Avg',
+      data: labels.map(()=>careerAvg),
+      borderColor: '#aaaaaa',
+      borderDash: [4,4],
+      borderWidth: 1.5,
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 3,
+    }] : []),
+  ];
+
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: '#6b7280',
+            font: { family: "'IBM Plex Mono', 'SF Mono', monospace", size: 11 },
+            usePointStyle: true,
+            pointStyle: (ctx) => {
+              const ds = datasets[ctx.datasetIndex];
+              return (ds && ds.borderDash) ? 'line' : 'circle';
+            },
+            boxWidth: 16,
+            padding: 16,
+            generateLabels: (chart) => {
+              return chart.data.datasets.map((ds, i) => ({
+                text: ds.label,
+                fillStyle: ds.borderColor,
+                strokeStyle: ds.borderColor,
+                lineWidth: ds.borderWidth,
+                lineDash: ds.borderDash || [],
+                pointStyle: ds.borderDash ? 'line' : 'circle',
+                hidden: false,
+                datasetIndex: i,
+              }));
+            }
+          }
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            title: (items) => `${items[0].label} — ${teams[items[0].dataIndex] || ''}`,
+            label: (item) => {
+              const v = item.raw;
+              if (item.datasetIndex === 0) return v!=null ? `${yLabel}: ${formatTick(v)}` : `${yLabel}: No data`;
+              return `${item.dataset.label}: ${formatTick(v)}`;
+            }
+          },
+          backgroundColor: '#ffffff',
+          borderColor: '#e5e7eb',
+          borderWidth: 1,
+          titleColor: '#111827',
+          bodyColor: '#6b7280',
+          titleFont: { family: "'IBM Plex Sans', sans-serif", size: 12, weight: '600' },
+          bodyFont: { family: "'IBM Plex Mono', monospace", size: 11 },
+          padding: 10,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#6b7280', font: { family: "'IBM Plex Mono', 'SF Mono', monospace", size: 11 } },
+          grid:  { display: false },
+          border: { color: '#e5e7eb' },
+        },
+        y: {
+          min: Math.max(0, yMin - pad),
+          max: yMax + pad,
+          ticks: {
+            color: '#6b7280',
+            font: { family: "'IBM Plex Mono', 'SF Mono', monospace", size: 11 },
+            callback: v => formatTick(v),
+          },
+          grid:  { color: '#f0f0f0', drawBorder: false },
+          border: { display: false },
+          title: { display: true, text: yLabel, color: '#9ca3af', font: { family: "'IBM Plex Sans', sans-serif", size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// ── Splits Tab ────────────────────────────────────────────
+let splitsLoaded = false;
+const TIER_COLORS = { Elite:'#d5539b', Average:'#99c9ea', Weak:'#6b7280' };
+const TIER_ORDER  = ['Elite','Average','Weak'];
+function fmt3(v)   { return v != null ? parseFloat(v).toFixed(3) : '—'; }
+function fmtInt(v) { return v != null ? v : '—'; }
+
+function buildSplitsGauge(label, pct, value, poolSize, fmtFn) {
+  const widget = document.createElement('div');
+  widget.className = 'pbar-widget';
+  const fmtV = fmtFn ? fmtFn(value) : fmt3(value);
+  let barInner = '', circleHTML = '', tipText;
+  if (pct != null) {
+    const fillCol  = barFillColor(pct);
+    const badgeCol = circleColor(pct);
+    const cLeft    = `clamp(0px, calc(${pct}% - 16px), calc(100% - 32px))`;
+    const ps       = poolSize != null ? ` among ${poolSize} qualified hitters` : '';
+    barInner   = `<div class="pbar-track"><div class="pbar-fill" style="width:${pct}%;background:${fillCol}"></div></div>`;
+    circleHTML = `<div class="pbar-circle" style="left:${cLeft};background:${badgeCol}">${pct}</div>`;
+    tipText    = `${label}: ${fmtV} — ${ordinal(pct)} percentile${ps}`;
+  } else {
+    barInner = `<div class="pbar-track"></div>`;
+    tipText  = `${label}: ${fmtV}`;
+  }
+  widget.innerHTML = `
+    <div class="pbar-label">${label}</div>
+    <div class="pbar-stat-val">${fmtV}</div>
+    <div class="pbar-bar-wrap">${barInner}${circleHTML}<div class="pbar-tooltip">${tipText}</div></div>`;
+  return widget;
+}
+
+async function loadSplits() {
+  splitsLoaded = true;
+  const res  = await fetch(`/api/player/${_playerName}/splits`);
+  const data = await res.json();
+  document.getElementById('splits-loading').style.display = 'none';
+  document.getElementById('splits-content').style.display = '';
+
+  // Cell shading helper for splits tables (JS-rendered)
+  const _bt = (data.thresholds || {}).batting || {};
+  function shadeCell(val, stat, invert) {
+    const t = _bt[stat]; if (!t || val == null) return '';
+    const rare = t.rare || false;
+    if (!invert) {
+      if (t.p90 != null && val >= t.p90 && (!rare || val > 0)) return ' cell-top10';
+      if (!rare && t.p10 != null && val <= t.p10)               return ' cell-bot10';
+    } else {
+      if (t.p10 != null && val <= t.p10 && (!rare || val > 0))  return ' cell-top10';
+      if (!rare && t.p90 != null && val >= t.p90)               return ' cell-bot10';
+    }
+    return '';
+  }
+
+  // ── HQ Batting Splits (batter vs HQ pitchers) ──────────────────────────
+  const hqTbody  = document.getElementById('splits-hq-tbody');
+  const hqEmpty  = document.getElementById('splits-hq-empty');
+  const hqGauges = document.getElementById('splits-hq-gauges');
+  hqTbody.innerHTML = '';
+
+  const hasBattingHq = data.hq && data.hq.length > 0;
+  const hasPitchingHq = data.hq_pitching && data.hq_pitching.length > 0;
+  const hasBatting = data.has_batting !== false;
+  const hasPitching = data.has_pitching !== false || hasPitchingHq;
+
+  if (hasBatting) {
+    document.getElementById('splits-hq-bat-section').style.display = '';
+  }
+
+  if (hasBattingHq) {
+    const latestSeason = Math.max(...data.hq.map(r => r.season));
+    const latestPct    = (data.percentiles || {})[String(latestSeason)] || {};
+    const latestHqRow  = data.hq.find(r => r.season === latestSeason);
+
+    const HQ_GAUGE_MAP = [
+      { key:'hq_ops',    label:'HQ OPS',   val: r => r?.ops, fmt: null },
+      { key:'hq_obp',    label:'HQ OBP',   val: r => r?.obp, fmt: null },
+      { key:'hq_avg',    label:'HQ AVG',   val: r => r?.avg, fmt: null },
+      { key:'hq_slg',    label:'HQ SLG',   val: r => r?.slg, fmt: null },
+      { key:'hq_ab_hr',  label:'HQ AB/HR', val: r => r?.hr > 0 ? Math.round(r.ab/r.hr*10)/10 : null, fmt: null },
+      { key:'hq_bb_pct', label:'HQ BB%',   val: r => r?.pa > 0 ? Math.round(r.bb/r.pa*1000)/1000 : null, fmt: v=>v!=null?(v*100).toFixed(1)+'%':'—' },
+      { key:'hq_k_pct',  label:'HQ K%',    val: r => r?.pa > 0 ? Math.round(r.so/r.pa*1000)/1000 : null, fmt: v=>v!=null?(v*100).toFixed(1)+'%':'—' },
+      { key:'hq_bb_k',   label:'HQ BB/K',  val: r => r?.so > 0 ? Math.round(r.bb/r.so*100)/100 : null, fmt: v=>v!=null?v.toFixed(2):'—' },
+    ];
+    HQ_GAUGE_MAP.forEach(({key, label, val, fmt}) => {
+      const e = latestPct[key] || {};
+      hqGauges.appendChild(buildSplitsGauge(label, e.percentile ?? null, val(latestHqRow), e.pool_size ?? null, fmt));
+    });
+
+    // Render newest-first
+    [...data.hq].sort((a,b) => b.season - a.season).forEach(r => {
+      const dnq = !r.qualifies;
+      const tr = document.createElement('tr');
+      if (dnq) tr.style.opacity = '0.55';
+      tr.innerHTML = `<td class="num">${r.season}${dnq ? ' <span class="muted" style="font-size:0.68rem">DNQ</span>' : ''}</td>
+        <td class="num">${fmtInt(r.pa)}</td><td class="num">${fmtInt(r.ab)}</td>
+        <td class="num">${fmtInt(r.h)}</td><td class="num">${fmtInt(r.doubles)}</td>
+        <td class="num">${fmtInt(r.triples)}</td><td class="num">${fmtInt(r.hr)}</td>
+        <td class="num">${fmtInt(r.rbi)}</td><td class="num">${fmtInt(r.bb)}</td>
+        <td class="num">${fmtInt(r.so)}</td>
+        <td class="num${shadeCell(r.avg,'avg',false)}">${fmt3(r.avg)}</td>
+        <td class="num${shadeCell(r.obp,'obp',false)}">${fmt3(r.obp)}</td>
+        <td class="num${shadeCell(r.slg,'slg',false)}">${fmt3(r.slg)}</td>
+        <td class="num${shadeCell(r.ops,'ops',false)}" style="font-weight:600">${fmt3(r.ops)}</td>`;
+      hqTbody.appendChild(tr);
+    });
+    document.getElementById('splits-hq-table').style.display = '';
+    hqEmpty.style.display = 'none';
+  } else {
+    document.getElementById('splits-hq-table').style.display = 'none';
+    hqEmpty.style.display = hasBatting ? '' : 'none';
+    if (!hasBatting) document.getElementById('splits-hq-bat-section').style.display = 'none';
+  }
+
+  // ── HQ Pitching Splits (pitcher vs HQ batters) ──────────────────────────
+  if (hasPitchingHq) {
+    document.getElementById('splits-hq-pit-section').style.display = '';
+    const pitTbody = document.getElementById('splits-hq-pit-tbody');
+    pitTbody.innerHTML = '';
+    [...data.hq_pitching].sort((a,b) => b.season - a.season).forEach(r => {
+      const dnq = !r.qualifies;
+      const tr = document.createElement('tr');
+      if (dnq) tr.style.opacity = '0.55';
+      const _pt = (data.thresholds || {}).pitching || {};
+      function shadePit(val, stat, invert=true) {
+        const t = _pt[stat]; if (!t || val == null) return '';
+        const rare = t.rare || false;
+        if (!invert) {
+          if (t.p90 != null && val >= t.p90 && (!rare || val > 0)) return ' cell-top10';
+          if (!rare && t.p10 != null && val <= t.p10) return ' cell-bot10';
+        } else {
+          if (t.p10 != null && val <= t.p10 && (!rare || val > 0)) return ' cell-top10';
+          if (!rare && t.p90 != null && val >= t.p90) return ' cell-bot10';
+        }
+        return '';
+      }
+      tr.innerHTML = `<td class="num">${r.season}${dnq ? ' <span class="muted" style="font-size:0.68rem">DNQ</span>' : ''}</td>
+        <td class="num">${fmtInt(r.bf || r.pa)}</td>
+        <td class="num${shadePit(r.era,'era',true)}">${r.era != null ? parseFloat(r.era).toFixed(2) : '—'}</td>
+        <td class="num${shadePit(r.obp_against,'obp',true)}">${fmt3(r.obp_against)}</td>
+        <td class="num${shadePit(r.baa,'avg',true)}">${fmt3(r.baa)}</td>
+        <td class="num">${r.k_per_6 != null ? parseFloat(r.k_per_6).toFixed(2) : '—'}</td>
+        <td class="num">${r.bb_per_6 != null ? parseFloat(r.bb_per_6).toFixed(2) : '—'}</td>`;
+      pitTbody.appendChild(tr);
+    });
+    document.getElementById('splits-hq-pit-table').style.display = '';
+    document.getElementById('splits-hq-pit-empty').style.display = 'none';
+  }
+
+  // ── Batting Tier Splits ─────────────────────────────────────────────────
+  const hasBattingTiers = data.tiers && data.tiers.length > 0;
+  const hasPitchingTiers = data.pitching_tiers && data.pitching_tiers.length > 0;
+
+  const TIER_TOOLTIPS = {
+    Elite:   'Top-tier opponents (top win% group)',
+    Average: 'Mid-tier opponents (middle win% group)',
+    Weak:    'Weak opponents (bottom win% group)',
+  };
+
+  if (hasBatting) {
+    document.getElementById('splits-tier-bat-section').style.display = '';
+  }
+  if (hasBattingTiers) {
+    document.getElementById('splits-tier-bat-empty').style.display = 'none';
+    const tierTbody  = document.getElementById('splits-tier-tbody');
+    tierTbody.innerHTML = '';
+
+    const tierRows = [...data.tiers].sort((a,b) => {
+      if (a.season !== b.season) return b.season - a.season;
+      return TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier);
+    });
+
+    const seasonSel = document.getElementById('splits-tier-season');
+    const uniqueSeasons = [...new Set(tierRows.map(r => r.season))].sort((a,b) => b-a);
+    uniqueSeasons.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      seasonSel.appendChild(opt);
+    });
+
+    function buildTierRows() {
+      const activeTier   = document.querySelector('#splits-tier-filter .tier-filter-btn.active')?.dataset.tier || 'All';
+      const activeSeason = seasonSel.value || '';
+      tierTbody.innerHTML = '';
+      tierRows.forEach(r => {
+        if (activeTier !== 'All' && r.tier !== activeTier) return;
+        if (activeSeason && String(r.season) !== activeSeason) return;
+        const small = (r.pa || 0) < 10;
+        const tr2   = document.createElement('tr');
+        if (small) tr2.style.opacity = '0.5';
+        tr2.dataset.tier   = r.tier;
+        tr2.dataset.season = r.season;
+        const chipCls = r.tier === 'Elite' ? 'tier-chip-elite' : r.tier === 'Average' ? 'tier-chip-average' : 'tier-chip-weak';
+        const sampleNote = small ? ' <span style="font-size:0.68rem;opacity:0.6">(small sample)</span>' : '';
+        tr2.innerHTML = `<td class="num">${r.season}</td>
+          <td><span class="tier-chip ${chipCls}" title="${TIER_TOOLTIPS[r.tier] || r.tier}">${r.tier}</span>${sampleNote}</td>
+          <td class="num">—</td>
+          <td class="num">${fmtInt(r.pa)}</td>
+          <td class="num">${fmtInt(r.ab)}</td>
+          <td class="num${shadeCell(r.avg,'avg',false)}">${fmt3(r.avg)}</td>
+          <td class="num${shadeCell(r.obp,'obp',false)}">${fmt3(r.obp)}</td>
+          <td class="num${shadeCell(r.slg,'slg',false)}">${fmt3(r.slg)}</td>
+          <td class="num${shadeCell(r.ops,'ops',false)}" style="font-weight:600">${fmt3(r.ops)}</td>
+          <td class="num${shadeCell(r.hr,'hr',false)}">${fmtInt(r.hr)}</td>
+          <td class="num">${fmtInt(r.rbi)}</td>
+          <td class="num">${fmtInt(r.bb)}</td>
+          <td class="num">${fmtInt(r.so)}</td>`;
+        tierTbody.appendChild(tr2);
+      });
+    }
+
+    const filterDiv = document.getElementById('splits-tier-filter');
+    filterDiv.innerHTML = '';
+    [{label:'All Tiers',val:'All'},{label:'Elite',val:'Elite'},{label:'Average',val:'Average'},{label:'Weak',val:'Weak'}].forEach(({label,val}) => {
+      const btn = document.createElement('button');
+      btn.className = 'tier-filter-btn' + (val === 'All' ? ' active' : '');
+      btn.textContent = label;
+      btn.dataset.tier = val;
+      if (val !== 'All') btn.style.color = TIER_COLORS[val];
+      btn.addEventListener('click', () => {
+        filterDiv.querySelectorAll('.tier-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        buildTierRows();
+      });
+      filterDiv.appendChild(btn);
+    });
+    seasonSel.addEventListener('change', buildTierRows);
+    buildTierRows();
+
+    document.getElementById('splits-tier-table').querySelectorAll('th.sortable').forEach(th => {
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', () => {
+        const rows = [...tierTbody.querySelectorAll('tr')];
+        const asc  = th.dataset.sortDir !== 'asc';
+        th.dataset.sortDir = asc ? 'asc' : 'desc';
+        rows.sort((a, b) => {
+          const av = a.querySelector(`td:nth-child(${th.cellIndex+1})`).textContent.trim();
+          const bv = b.querySelector(`td:nth-child(${th.cellIndex+1})`).textContent.trim();
+          const an = parseFloat(av.replace(/[^0-9.-]/g,''));
+          const bn = parseFloat(bv.replace(/[^0-9.-]/g,''));
+          if (!isNaN(an) && !isNaN(bn)) return asc ? an-bn : bn-an;
+          return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+        rows.forEach(r => tierTbody.appendChild(r));
+      });
+    });
+  } else {
+    document.getElementById('splits-tier-bat-section').style.display = hasPitchingTiers ? 'none' : '';
+    document.getElementById('splits-tier-bat-empty').style.display = '';
+  }
+
+  // ── Pitching Tier Splits ────────────────────────────────────────────────
+  if (hasPitchingTiers) {
+    document.getElementById('splits-tier-pit-section').style.display = '';
+    document.getElementById('splits-tier-pit-empty').style.display = 'none';
+    const pitTierTbody = document.getElementById('splits-pit-tier-tbody');
+    pitTierTbody.innerHTML = '';
+
+    const pitTierRows = [...data.pitching_tiers].sort((a,b) => {
+      if (a.season !== b.season) return b.season - a.season;
+      return TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier);
+    });
+
+    const pitSeasonSel = document.getElementById('splits-pit-tier-season');
+    const pitUniqueSeasons = [...new Set(pitTierRows.map(r => r.season))].sort((a,b) => b-a);
+    pitUniqueSeasons.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s; opt.textContent = s;
+      pitSeasonSel.appendChild(opt);
+    });
+
+    function buildPitTierRows() {
+      const activeTier   = document.querySelector('#splits-pit-tier-filter .tier-filter-btn.active')?.dataset.tier || 'All';
+      const activeSeason = pitSeasonSel.value || '';
+      pitTierTbody.innerHTML = '';
+      pitTierRows.forEach(r => {
+        if (activeTier !== 'All' && r.tier !== activeTier) return;
+        if (activeSeason && String(r.season) !== activeSeason) return;
+        const small = (r.pa || 0) < 10;
+        const tr2   = document.createElement('tr');
+        if (small) tr2.style.opacity = '0.5';
+        const chipCls = r.tier === 'Elite' ? 'tier-chip-elite' : r.tier === 'Average' ? 'tier-chip-average' : 'tier-chip-weak';
+        const sampleNote = small ? ' <span style="font-size:0.68rem;opacity:0.6">(small sample)</span>' : '';
+        // For pitching: lower avg/obp/ops is better (invert shading)
+        tr2.innerHTML = `<td class="num">${r.season}</td>
+          <td><span class="tier-chip ${chipCls}" title="${TIER_TOOLTIPS[r.tier] || r.tier}">${r.tier}</span>${sampleNote}</td>
+          <td class="num">${fmtInt(r.pa)}</td>
+          <td class="num">${fmtInt(r.ab)}</td>
+          <td class="num${shadeCell(r.avg,'avg',true)}">${fmt3(r.avg)}</td>
+          <td class="num${shadeCell(r.obp,'obp',true)}">${fmt3(r.obp)}</td>
+          <td class="num${shadeCell(r.slg,'slg',true)}">${fmt3(r.slg)}</td>
+          <td class="num${shadeCell(r.ops,'ops',true)}" style="font-weight:600">${fmt3(r.ops)}</td>
+          <td class="num">${fmtInt(r.hr)}</td>
+          <td class="num">${fmtInt(r.bb)}</td>
+          <td class="num">${fmtInt(r.so)}</td>`;
+        pitTierTbody.appendChild(tr2);
+      });
+    }
+
+    const pitFilterDiv = document.getElementById('splits-pit-tier-filter');
+    pitFilterDiv.innerHTML = '';
+    [{label:'All Tiers',val:'All'},{label:'Elite',val:'Elite'},{label:'Average',val:'Average'},{label:'Weak',val:'Weak'}].forEach(({label,val}) => {
+      const btn = document.createElement('button');
+      btn.className = 'tier-filter-btn' + (val === 'All' ? ' active' : '');
+      btn.textContent = label;
+      btn.dataset.tier = val;
+      if (val !== 'All') btn.style.color = TIER_COLORS[val];
+      btn.addEventListener('click', () => {
+        pitFilterDiv.querySelectorAll('.tier-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        buildPitTierRows();
+      });
+      pitFilterDiv.appendChild(btn);
+    });
+    pitSeasonSel.addEventListener('change', buildPitTierRows);
+    buildPitTierRows();
+
+    document.getElementById('splits-pit-tier-table').querySelectorAll('th.sortable').forEach(th => {
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', () => {
+        const rows = [...pitTierTbody.querySelectorAll('tr')];
+        const asc  = th.dataset.sortDir !== 'asc';
+        th.dataset.sortDir = asc ? 'asc' : 'desc';
+        rows.sort((a, b) => {
+          const av = a.querySelector(`td:nth-child(${th.cellIndex+1})`).textContent.trim();
+          const bv = b.querySelector(`td:nth-child(${th.cellIndex+1})`).textContent.trim();
+          const an = parseFloat(av.replace(/[^0-9.-]/g,''));
+          const bn = parseFloat(bv.replace(/[^0-9.-]/g,''));
+          if (!isNaN(an) && !isNaN(bn)) return asc ? an-bn : bn-an;
+          return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+        });
+        rows.forEach(r => pitTierTbody.appendChild(r));
+      });
+    });
+  }
+
+  // ── Playoff (in splits tab) ─────────────────────────────────────────────
+  if (data.playoff) {
+    const po = data.playoff;
+    document.getElementById('splits-playoff-empty').style.display = 'none';
+    document.getElementById('splits-playoff-table-wrap').style.display = '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>Career</td>
+      <td class="num">${fmtInt(po.pa)}</td><td class="num">${fmtInt(po.ab)}</td>
+      <td class="num">${fmtInt(po.h)}</td><td class="num">${fmtInt(po.doubles)}</td>
+      <td class="num">${fmtInt(po.triples)}</td><td class="num">${fmtInt(po.hr)}</td>
+      <td class="num">${fmtInt(po.rbi)}</td><td class="num">${fmtInt(po.bb)}</td>
+      <td class="num">${fmtInt(po.so)}</td>
+      <td class="num${shadeCell(po.avg,'avg',false)}">${fmt3(po.avg)}</td>
+      <td class="num${shadeCell(po.obp,'obp',false)}">${fmt3(po.obp)}</td>
+      <td class="num${shadeCell(po.slg,'slg',false)}">${fmt3(po.slg)}</td>
+      <td class="num${shadeCell(po.ops,'ops',false)}" style="font-weight:600">${fmt3(po.ops)}</td>`;
+    document.getElementById('splits-playoff-tbody').appendChild(tr);
+  }
+
+  // Show no-data message if nothing at all
+  const hasAnyData = hasBattingHq || hasPitchingHq || hasBattingTiers || hasPitchingTiers || data.playoff;
+  if (!hasAnyData) {
+    document.getElementById('splits-content').innerHTML = '<p class="muted" style="padding:1rem 0;font-size:0.9rem">No splits data available for this player.</p>';
+  }
+}
+
+// ── Playoffs Tab ─────────────────────────────────────────
+let playoffsLoaded = false;
+const PO_BAT_ORDER = ['avg','obp','slg','ops','hr','rbi','bb','so'];
+
+async function loadPlayoffs() {
+  playoffsLoaded = true;
+  const res  = await fetch(`/api/player/${_playerName}/playoffs`);
+  const data = await res.json();
+  document.getElementById('playoffs-loading').style.display = 'none';
+  document.getElementById('playoffs-content').style.display = '';
+
+  const _pobt = (data.thresholds || {}).batting || {};
+  function shadePO(val, stat, invert=false) {
+    const t = _pobt[stat]; if (!t || val == null) return '';
+    const rare = t.rare || false;
+    if (!invert) {
+      if (t.p90 != null && val >= t.p90 && (!rare || val > 0)) return ' cell-top10';
+      if (!rare && t.p10 != null && val <= t.p10)               return ' cell-bot10';
+    } else {
+      if (t.p10 != null && val <= t.p10 && (!rare || val > 0))  return ' cell-top10';
+      if (!rare && t.p90 != null && val >= t.p90)               return ' cell-bot10';
+    }
+    return '';
+  }
+
+  const tbody = document.getElementById('playoffs-bat-tbody');
+  const empty = document.getElementById('playoffs-bat-empty');
+  tbody.innerHTML = '';
+
+  if (data.seasons && data.seasons.length > 0) {
+    const careerRow  = data.seasons.find(r => r.season === 0) || data.seasons[data.seasons.length-1];
+    const gauges     = (data.gauges || {})[String(careerRow.season)] || {};
+    const gaugesRow  = document.getElementById('playoffs-gauges-row');
+    gaugesRow.innerHTML = '';
+
+    if (data.pool_size >= 5) {
+      PO_BAT_ORDER.forEach(sn => {
+        const s = gauges[sn];
+        if (s) gaugesRow.appendChild(buildGauge(s));
+      });
+    } else {
+      gaugesRow.innerHTML = '<span class="muted" style="font-size:0.82rem">Pool too small for percentile bars (need 5+ qualified players)</span>';
+    }
+
+    data.seasons.forEach(r => {
+      const pa   = r.pa || 0;
+      const dnq  = pa < 25;
+      const slbl = r.season === 0 ? 'Career' : r.season;
+      const tr   = document.createElement('tr');
+      tr.innerHTML = `<td class="num">${slbl}${dnq?'<span class="muted" style="font-size:0.72rem;margin-left:4px">DNQ</span>':''}</td>
+        <td class="num">${fmtInt(pa)}</td><td class="num">${fmtInt(r.ab)}</td>
+        <td class="num">${fmtInt(r.g)}</td><td class="num">${fmtInt(r.h)}</td>
+        <td class="num">${fmtInt(r.doubles)}</td><td class="num">${fmtInt(r.triples)}</td>
+        <td class="num${shadePO(r.hr,'hr')}">${fmtInt(r.hr)}</td>
+        <td class="num${shadePO(r.rbi,'rbi')}">${fmtInt(r.rbi)}</td>
+        <td class="num${shadePO(r.bb,'bb')}">${fmtInt(r.bb)}</td>
+        <td class="num${shadePO(r.so,'so',true)}">${fmtInt(r.so)}</td>
+        <td class="num${shadePO(r.avg,'avg')}">${fmt3(r.avg)}</td>
+        <td class="num${shadePO(r.obp,'obp')}">${fmt3(r.obp)}</td>
+        <td class="num${shadePO(r.slg,'slg')}">${fmt3(r.slg)}</td>
+        <td class="num${shadePO(r.ops,'ops')}" style="font-weight:600">${fmt3(r.ops)}</td>`;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('playoffs-bat-table').style.display = '';
+    empty.style.display = 'none';
+  } else {
+    document.getElementById('playoffs-bat-table').style.display = 'none';
+    empty.style.display = '';
+  }
+
+  // HQ in playoffs tab
+  const hqTbody = document.getElementById('playoffs-hq-tbody');
+  const hqEmpty = document.getElementById('playoffs-hq-empty');
+  hqTbody.innerHTML = '';
+  if (data.hq && data.hq.length > 0) {
+    data.hq.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="num">${r.season}</td>
+        <td class="num">${fmtInt(r.pa)}</td><td class="num">${fmtInt(r.ab)}</td>
+        <td class="num">${fmtInt(r.h)}</td><td class="num">${fmtInt(r.doubles)}</td>
+        <td class="num">${fmtInt(r.triples)}</td>
+        <td class="num${shadePO(r.hr,'hr')}">${fmtInt(r.hr)}</td>
+        <td class="num${shadePO(r.rbi,'rbi')}">${fmtInt(r.rbi)}</td>
+        <td class="num${shadePO(r.bb,'bb')}">${fmtInt(r.bb)}</td>
+        <td class="num${shadePO(r.so,'so',true)}">${fmtInt(r.so)}</td>
+        <td class="num${shadePO(r.avg,'avg')}">${fmt3(r.avg)}</td>
+        <td class="num${shadePO(r.obp,'obp')}">${fmt3(r.obp)}</td>
+        <td class="num${shadePO(r.slg,'slg')}">${fmt3(r.slg)}</td>
+        <td class="num${shadePO(r.ops,'ops')}" style="font-weight:600">${fmt3(r.ops)}</td>`;
+      hqTbody.appendChild(tr);
+    });
+    document.getElementById('playoffs-hq-table').style.display = '';
+    hqEmpty.style.display = 'none';
+  } else {
+    document.getElementById('playoffs-hq-table').style.display = 'none';
+    hqEmpty.style.display = '';
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────
+loadGauges();
+loadTrend();
+</script>
+{% endblock %}

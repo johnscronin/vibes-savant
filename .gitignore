@@ -1,0 +1,6 @@
+vibes_savant_backup_*.db
+progress_log.txt
+vibes_savant_site/
+__pycache__/
+*.pyc
+.DS_Store

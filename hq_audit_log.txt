@@ -1,0 +1,1548 @@
+=== HQ AUDIT LOG ===
+Started: Sat Mar 28 01:22:53 CDT 2026
+Backup created: vibes_savant_backup_20260328_0122.db
+
+============================================================
+HQ PIPELINE STARTED: 2026-03-28 01:28:19
+============================================================
+
+============================================================
+=== STEP 1 AUDIT RESULTS ===
+============================================================
+1. Total rows in batter_vs_pitcher: 71296
+2. Unique batters: 262
+3. Unique opposing pitchers: 497
+4. Sample 10 rows: [see query output above]
+5. Seasons covered:
+   2004: 433 records
+   2005: 1385 records
+   2006: 2011 records
+   2007: 2174 records
+   2008: 2160 records
+   2009: 2086 records
+   2010: 2422 records
+   2011: 2565 records
+   2012: 2560 records
+   2013: 2829 records
+   2014: 2237 records
+   2015: 1968 records
+   2016: 2280 records
+   2017: 2092 records
+   2018: 2222 records
+   2019: 2441 records
+   2020: 1244 records
+   2021: 2162 records
+   2022: 2428 records
+   2023: 2573 records
+   2024: 2525 records
+   2025: 2492 records
+   Career: 24007 records
+6. Vibes players with BvP data:
+   Anakin: 129 records (2020-Career)
+   CatNip: 273 records (2019-Career)
+   Cheerio: 470 records (2016-Career)
+   Epstein: 477 records (2016-Career)
+   FishHook: 329 records (2019-Career)
+   Fortnite: 14 records (2023-Career)
+   HuckFinn: 575 records (2013-Career)
+   Jessie: 2 records (2025-Career)
+   Kar: 5 records (2021-Career)
+   Nightmare: 915 records (2007-Career)
+7. PA check Epstein 2025: BvP=217, batting_stats=217 - MATCH
+8. Vibes players with 0 BvP records: Jessie (2 records only), Kar (5 records only), Fortnite (14 records only)
+9. Non-Vibes unique players in BvP: 252
+10. Diagnosis: BvP table uses hashtag format for Vibes players (FishHook, HuckFinn)
+    league_batting_stats uses display names (Fish Hook, Huck Finn)
+    league_pitching_stats uses display names for both
+    PA check passes perfectly (217 for Epstein 2025)
+
+============================================================
+=== STEP 2 AUDIT: ERA Matching ===
+============================================================
+  Direct name match: 1506 matched / 2446 total = 61.6%
+  Unmatched: 940
+  Root causes:
+  - Some pitchers appear in BvP but not in league_pitching_stats (occasional pitchers, position players)
+  - These pitchers without ERA data cannot be HQ pitchers by definition
+  PA Coverage: ~87.2% of plate appearances are vs pitchers with ERA data
+  VERDICT: 61.6% name match rate but 87.2% PA coverage - acceptable as non-matched = non-HQ
+
+============================================================
+=== STEP 3 AUDIT: OBP Matching ===
+============================================================
+  Direct name match: 1331 matched / 1694 total = 78.6%
+  Unmatched: 363
+  Key mismatches: FishHook vs 'Fish Hook', HuckFinn vs 'Huck Finn'
+  After hashtag normalization: ~85%+ match rate
+
+=== STEP 4: Building Name Normalization Mappings ===
+  name_mappings: 99 entries inserted
+
+  Name normalization test:
+    'Dr. Seuss' -> 'dr seuss'
+    'O'Bannion' -> 'obannion'
+    'T-Mac' -> 't mac'
+    'Fish Hook' -> 'fish hook'
+    'Huck Finn' -> 'huck finn'
+    'FishHook' -> 'fishhook'
+    'HuckFinn' -> 'huckfinn'
+    'Shirls Jr' -> 'shirls jr'
+    'B Squared' -> 'b squared'
+    'Knooty Booty' -> 'knooty booty'
+
+=== STEP 5: Building HQ Pitcher and Hitter Lists ===
+
+  HQ Pitchers (ERA < 3.5, qualified):
+  2004: 9 HQ pitchers | Truck(1.33), Shirls(1.99), Cota(2.22), J-Ski(2.3), Mathis(2.62), The Pirate(2.67), Sanchez(2.99), Rocket(3.08), CX(3.41)
+  2005: 21 HQ pitchers | Eck(0.35), Doc(1.27), The Man(1.34), CJ(1.38), Cota(1.56), J-Ski(1.6), Costa(1.68), AC(1.84), Shirls(2.04), Tugboat(2.09)
+  2006: 24 HQ pitchers | CJ(0.61), Doc(0.9), Seibs(1.15), T-Bag(1.39), Coop(1.4), Spoon(1.4), Shirls(1.41), Chops(1.72), Dr. Seuss(1.75), Torpedo(1.93)
+  2007: 28 HQ pitchers | Dr. Seuss(0.63), Doc(1.11), Spoon(1.39), Rondell(1.4), Palpatine(1.52), Seibs(1.54), Hartski(1.65), Shirls(1.74), Molgs(1.78), Tugboat(1.83)
+  2008: 25 HQ pitchers | Edgar(0.43), Doc(0.48), Dr. Seuss(0.7), Palpatine(1.22), H9K(1.29), Spoon(1.34), AC(1.46), CJ(1.56), T-Bag(1.6), Tugboat(1.94)
+  2009: 36 HQ pitchers | Shirls(0.52), H9K(0.79), Dr. Seuss(0.94), Seibs(1.17), The Kid(1.22), CJ(1.28), Trans Am(1.32), Tugboat(1.35), Palpatine(1.66), DJ(1.76)
+  2010: 30 HQ pitchers | Box(0.78), CJ(0.96), Dr. Seuss(1.04), Doc(1.13), Palpatine(1.15), Beardface(1.27), Seibs(1.27), Trans Am(1.43), H9K(1.46), Web Gem(1.53)
+  2011: 24 HQ pitchers | Tugboat(0.72), Dr. Seuss(1.18), Rex(1.74), Beardface(1.75), Pork Buoy(1.8), H9K(1.9), Shirls(1.91), The Kid(1.93), CJ(1.96), Web Gem(2.05)
+  2012: 21 HQ pitchers | Beardface(1.01), Tugboat(1.3), Sticks(1.39), The Kid(1.65), Box(1.87), Shirls(1.88), TJ(1.89), Web Gem(1.95), Nightmare(1.97), Torpedo(1.97)
+  2013: 34 HQ pitchers | Monsoon(0.14), Dr. Seuss(0.5), H9K(0.64), Web Gem(0.79), Tugboat(0.81), Shirls(0.86), Hardball(0.91), Sticks(1.13), Edgar(1.24), Nightmare(1.26)
+  2014: 35 HQ pitchers | The Kid(0.49), Dr. Seuss(0.59), Rex(0.65), Handy Mat(0.81), Sticks(0.84), Hardball(0.87), Shirls(0.89), Web Gem(1.07), Boom(1.17), Nine(1.2)
+  2015: 27 HQ pitchers | Dr. Seuss(0.16), Palpatine(0.26), Sticks(0.28), Nightmare(0.92), Hardball(0.96), Beardface(1.04), JC(1.55), Old Yeller(1.69), Shirls(1.74), Santi(2.04)
+  2016: 25 HQ pitchers | Old Yeller(0.82), Dr. Seuss(0.9), Mippey5(1.02), Sticks(1.03), Nutshot(1.27), Web Gem(1.28), Nightmare(1.6), Huck Finn(1.66), Taco(1.79), Palpatine(1.82)
+  2017: 28 HQ pitchers | Dr. Seuss(0.26), Nightmare(0.57), Shandy(0.57), Boom(0.77), Epstein(0.9), Mippey5(1.09), Huck Finn(1.48), DJ(1.71), Thunderson(1.92), Old Yeller(1.95)
+  2018: 35 HQ pitchers | JC(0.79), Dr. Seuss(0.87), Nightmare(0.9), Spaz(1.03), Handy Mat(1.1), Boom(1.42), Taco(1.46), Hardball(1.47), Bliss Jr(1.7), Psych(1.7)
+  2019: 31 HQ pitchers | Dr. Seuss(0.64), Nightmare(0.93), Boom(1.19), Epstein(1.23), Handy Mat(1.28), Old Yeller(1.54), JC(1.68), Hardball(1.74), Taco(1.85), Bliss Jr(1.91)
+  2020: 22 HQ pitchers | Nightmare(0.71), Dr. Seuss(0.89), Griz(1.01), Nickname(1.2), The Man(1.25), Web Gem(1.52), Mippey5(1.56), Epstein(1.87), Lulu(1.89), Psych(1.98)
+  2021: 19 HQ pitchers | JC(1.16), Nightmare(1.33), Dr. Seuss(1.89), Thunderson(2.01), Paper Boy(2.07), Box(2.42), Groundskeeper Willie(2.42), Lulu(2.56), The Wish(2.61), Mippey5(2.76)
+  2022: 14 HQ pitchers | Dumpy(1.83), Dr. Seuss(2.22), Sanchez(2.25), Psych(2.33), Air Jordy(2.43), Knooty Booty(2.59), Nightmare(2.62), Epstein(2.69), Mippey5(2.8), Web Gem(3.0)
+  2023: 15 HQ pitchers | Psych(1.09), Dumpy(1.54), Mippey5(1.58), Epstein(1.66), Dr. Seuss(1.88), Handy Mat(2.17), Z-Dog(2.17), Cakes(2.33), Air Jordy(2.42), Nightmare(2.63)
+  2024: 22 HQ pitchers | Air Jordy(1.17), Stix(1.47), Mippey5(1.7), Psych(1.71), Nightmare(1.92), Handy Mat(2.2), DaVinci(2.22), Griz(2.28), Cakes(2.45), Stache(2.46)
+  2025: 18 HQ pitchers | Mippey5(1.6), DaVinci(1.75), Shipwreck(2.15), T Sea(2.15), Nightmare(2.18), Psych(2.52), Cakes(2.54), Air Jordy(2.57), CatNip(2.59), Pooh Bear(2.77)
+
+  Total hq_pitchers records: 543
+
+  HQ Batters (OBP > 0.35, qualified):
+  2004: 12 HQ batters | Nine(0.486), Chops(0.443), Edgar(0.431), Costa(0.415), J-Ski(0.399), Tom(0.395), Nelson(0.381), Jon(0.363)
+  2005: 24 HQ batters | J-Ski(0.494), Sanchez(0.485), Tugboat(0.475), Nine(0.468), Chops(0.449), Ace(0.426), Neush(0.426), Teen Wolf(0.401)
+  2006: 43 HQ batters | Spoon(0.539), Hobbs(0.519), Fedawg(0.491), J-Ski(0.485), Balls(0.48), Quick(0.464), Lil' Randall(0.444), Steve 1(0.438)
+  2007: 32 HQ batters | Chops(0.473), Panther(0.455), Hendi(0.446), Hobbs(0.436), Dutch(0.43), Edgar(0.426), Sanchez(0.425), Nine(0.423)
+  2008: 38 HQ batters | Chops(0.519), Monsoon(0.491), Spoon(0.449), J-Ski(0.447), Hobbs(0.445), Edgar(0.428), Bliss(0.423), Tugboat(0.423)
+  2009: 45 HQ batters | Chops(0.517), JC(0.502), Tugboat(0.463), Hobbs(0.458), Edgar(0.445), Nine(0.441), Sanchez(0.436), Two Bat(0.43)
+  2010: 39 HQ batters | Tugboat(0.529), JC(0.476), K-Mart(0.476), Pearl(0.476), Spaz(0.473), Focker(0.464), Shirls(0.432), 60 Hz(0.429)
+  2011: 65 HQ batters | Aquaman(0.502), Rex(0.492), TJ(0.483), Beardface(0.474), Cobra Kai(0.471), Torpedo(0.465), Chops(0.463), Flow(0.46)
+  2012: 60 HQ batters | Shirls(0.469), Vlade(0.467), Chops(0.466), Spaz(0.462), Hobbs(0.46), Tugboat(0.453), Sanchez(0.451), Focker(0.45)
+  2013: 60 HQ batters | Handy Mat(0.604), Two Bat(0.507), Bros(0.506), Smallpox(0.506), Tugboat(0.497), Fedawg(0.496), Chops(0.474), Mippey5(0.474)
+  2014: 58 HQ batters | Smallpox(0.579), Seabass(0.523), Fedawg(0.492), Chops(0.481), JC(0.475), Web Gem(0.47), Boom(0.468), Aquaman(0.46)
+  2015: 44 HQ batters | Hondo(0.505), Boom(0.494), Pearl(0.481), Smallpox(0.458), Chops(0.454), Fedawg(0.449), Al(0.446), Seabass(0.444)
+  2016: 45 HQ batters | Hondo(0.503), Pearl(0.497), Sanchez(0.486), TT(0.482), Smallpox(0.476), Beardface(0.462), Shirls(0.457), Chops(0.455)
+  2017: 32 HQ batters | Griz(0.498), Seabass(0.494), Chops(0.493), Mippey5(0.47), Smallpox(0.457), Sanchez(0.447), Rocky(0.441), EAD(0.44)
+  2018: 35 HQ batters | G String(0.536), Torpedo(0.536), EAD(0.492), Psych(0.474), Smallpox(0.466), Web Gem(0.464), JC(0.46), Schnoogens(0.45)
+  2019: 50 HQ batters | Dr. Seuss(0.524), Psych(0.511), Handy Mat(0.51), Mippey5(0.485), Griz(0.479), Box(0.476), Deuce(0.475), Pooh Bear(0.468)
+  2020: 34 HQ batters | Chops(0.513), Daubs(0.469), Smallpox(0.462), Dr. Seuss(0.458), Psych(0.454), Baby Face(0.445), Face(0.441), Griz(0.441)
+  2021: 66 HQ batters | Psych(0.533), Smallpox(0.52), Baby Face(0.513), Epstein(0.512), Chops(0.492), pNut(0.49), Dr. Seuss(0.487), Griz(0.482)
+  2022: 76 HQ batters | Scrabble(0.521), pNut(0.521), Dr. Seuss(0.515), Griz(0.505), Baby Face(0.497), Pooh Bear(0.495), Mehoff(0.488), Psych(0.488)
+  2023: 80 HQ batters | Taco(0.554), Baby Face(0.553), Chops(0.547), Mippey5(0.539), Face(0.525), The Wish(0.525), Griz(0.509), Dr. Seuss(0.507)
+  2024: 75 HQ batters | Chops(0.534), Face(0.506), Mippey5(0.498), Smallpox(0.498), Psych(0.496), TD(0.494), Thor(0.491), Knipples(0.487)
+  2025: 84 HQ batters | Griz(0.551), Smallpox(0.549), The Wish(0.525), Baby Face(0.52), Meow(0.509), Stix(0.509), Face(0.502), Web Gem(0.5)
+
+  Total hq_batters records: 1097
+
+=== STEP 6: Calculating HQ Batting Splits ===
+  HQ pitcher lookup entries: 543
+  BvP rows to process: 2203
+  Rows matched to HQ pitchers: 626, unmatched: 1577
+
+  OPS Sanity Check Warnings:
+  WARNING: Anakin 2025 HQ OPS (1.988) > overall OPS (1.635) by 0.353
+  WARNING: Epstein 2022 HQ OPS (1.587) > overall OPS (1.339) by 0.248
+
+  Records saved: 69
+  Qualified records (10+ PA): 69
+
+=== STEP 7: Calculating HQ Pitching Splits ===
+  HQ batter lookup entries: 1097
+  Total pitchers in BvP as opposing_pitcher: 287
+  Pitcher-season splits calculated: 668
+
+  HQ pitching splits saved: 665
+  Qualified (10+ PA): 281
+
+  Vibes pitchers vs HQ batters:
+  CatNip:
+    2019: PA=11, H=4, HR=2, BB=1, SO=2, OBP-against=0.455, qualifies=1
+  Epstein:
+    2019: PA=13, H=2, HR=1, BB=0, SO=4, OBP-against=0.154, qualifies=1
+    2020: PA=9, H=3, HR=0, BB=2, SO=2, OBP-against=0.556, qualifies=0
+    2021: PA=5, H=0, HR=0, BB=2, SO=1, OBP-against=0.4, qualifies=0
+    2024: PA=4, H=1, HR=1, BB=0, SO=1, OBP-against=0.25, qualifies=0
+  FishHook:
+    2020: PA=5, H=0, HR=0, BB=1, SO=0, OBP-against=0.2, qualifies=0
+  HuckFinn:
+    2019: PA=3, H=0, HR=0, BB=0, SO=2, OBP-against=0.0, qualifies=0
+    2021: PA=5, H=3, HR=1, BB=0, SO=0, OBP-against=0.6, qualifies=0
+    2024: PA=5, H=1, HR=0, BB=0, SO=1, OBP-against=0.2, qualifies=0
+  Kar:
+    2021: PA=5, H=4, HR=2, BB=0, SO=1, OBP-against=0.8, qualifies=0
+  Nightmare:
+    2016: PA=5, H=1, HR=1, BB=2, SO=0, OBP-against=0.6, qualifies=0
+    2018: PA=10, H=1, HR=1, BB=0, SO=4, OBP-against=0.1, qualifies=1
+    2019: PA=13, H=0, HR=0, BB=0, SO=9, OBP-against=0.0, qualifies=1
+    2020: PA=11, H=1, HR=0, BB=1, SO=6, OBP-against=0.182, qualifies=1
+    2021: PA=12, H=0, HR=0, BB=0, SO=8, OBP-against=0.0, qualifies=1
+    2022: PA=17, H=5, HR=4, BB=1, SO=5, OBP-against=0.353, qualifies=1
+
+=== STEP 8: Calculating HQ Percentile Rankings ===
+
+  Batting vs HQ Pitcher percentiles:
+  2007: pool too thin (1) - skipping
+  2008: pool too thin (1) - skipping
+  2009: pool too thin (1) - skipping
+  2010: pool too thin (1) - skipping
+  2011: pool too thin (1) - skipping
+  2012: pool too thin (1) - skipping
+  2013: *** THIN POOL (2 players)
+  2014: *** THIN POOL (2 players)
+  2015: *** THIN POOL (2 players)
+  2016: *** THIN POOL (4 players)
+  2017: *** THIN POOL (4 players)
+  2018: *** THIN POOL (4 players)
+  2019: pool_size=6
+  2020: pool_size=7
+  2021: pool_size=6
+  2022: pool_size=6
+  2023: pool_size=6
+  2024: pool_size=7
+  2025: pool_size=7
+  Total batting HQ percentile records inserted: 567
+
+  Pitching vs HQ Hitter percentiles:
+  2011: *** THIN POOL (2 pitchers)
+  2013: pool_size=13
+  2015: *** THIN POOL (2 pitchers)
+  2016: *** THIN POOL (2 pitchers)
+  2017: *** THIN POOL (2 pitchers)
+  2018: pool_size=18
+  2019: pool_size=36
+  2020: pool_size=24
+  2021: pool_size=37
+  2022: pool_size=33
+  2023: pool_size=37
+  2024: pool_size=37
+  2025: pool_size=37
+  Total pitching HQ percentile records inserted: 3006
+
+=== VERIFICATION: Final DB State ===
+
+  Epstein 2025 HQ batting split:
+    PA=42, AB=35, H=5, HR=3, BB=7, SO=16
+    AVG=0.143, OBP=0.286, SLG=0.4, OPS=0.686
+    BB%=0.167, K%=0.381, ISO=0.257, BABIP=0.125
+    Qualifies: 1
+  CatNip 2025: no HQ pitching split (may not have pitched or <1 HQ batter faced)
+
+  Total hq_opponent_splits records: 734
+  Qualified batting (10+ PA): 69
+  Qualified pitching (10+ PA): 281
+  HQ percentile records in percentile_rankings: 3573
+
+  Epstein 2025 HQ percentiles:
+    hq_avg: 0.143 -> 1th pct [Q] (pool=7)
+    hq_babip: 0.125 -> 14th pct [Q] (pool=7)
+    hq_bb_k: 0.438 -> 43th pct [Q] (pool=7)
+    hq_bb_pct: 0.167 -> 71th pct [Q] (pool=7)
+    hq_iso: 0.257 -> 71th pct [Q] (pool=7)
+    hq_k_pct: 0.381 -> 1th pct [Q] (pool=7)
+    hq_obp: 0.286 -> 29th pct [Q] (pool=7)
+    hq_ops: 0.686 -> 29th pct [Q] (pool=7)
+    hq_slg: 0.4 -> 57th pct [Q] (pool=7)
+
+============================================================
+HQ PIPELINE COMPLETE: 2026-03-28 01:28:19
+============================================================
+
+============================================================
+HQ PIPELINE STARTED: 2026-03-28 01:30:53
+============================================================
+
+============================================================
+=== STEP 1 AUDIT RESULTS ===
+============================================================
+1. Total rows in batter_vs_pitcher: 71296
+2. Unique batters: 262
+3. Unique opposing pitchers: 497
+4. Sample 10 rows: [see query output above]
+5. Seasons covered:
+   2004: 433 records
+   2005: 1385 records
+   2006: 2011 records
+   2007: 2174 records
+   2008: 2160 records
+   2009: 2086 records
+   2010: 2422 records
+   2011: 2565 records
+   2012: 2560 records
+   2013: 2829 records
+   2014: 2237 records
+   2015: 1968 records
+   2016: 2280 records
+   2017: 2092 records
+   2018: 2222 records
+   2019: 2441 records
+   2020: 1244 records
+   2021: 2162 records
+   2022: 2428 records
+   2023: 2573 records
+   2024: 2525 records
+   2025: 2492 records
+   Career: 24007 records
+6. Vibes players with BvP data:
+   Anakin: 129 records (2020-Career)
+   CatNip: 273 records (2019-Career)
+   Cheerio: 470 records (2016-Career)
+   Epstein: 477 records (2016-Career)
+   FishHook: 329 records (2019-Career)
+   Fortnite: 14 records (2023-Career)
+   HuckFinn: 575 records (2013-Career)
+   Jessie: 2 records (2025-Career)
+   Kar: 5 records (2021-Career)
+   Nightmare: 915 records (2007-Career)
+7. PA check Epstein 2025: BvP=217, batting_stats=217 - MATCH
+8. Vibes players with 0 BvP records: Jessie (2 records only), Kar (5 records only), Fortnite (14 records only)
+9. Non-Vibes unique players in BvP: 252
+10. Diagnosis: BvP table uses hashtag format for Vibes players (FishHook, HuckFinn)
+    league_batting_stats uses display names (Fish Hook, Huck Finn)
+    league_pitching_stats uses display names for both
+    PA check passes perfectly (217 for Epstein 2025)
+
+============================================================
+=== STEP 2 AUDIT: ERA Matching ===
+============================================================
+  Direct name match: 1506 matched / 2446 total = 61.6%
+  Unmatched: 940
+  Root causes:
+  - Some pitchers appear in BvP but not in league_pitching_stats (occasional pitchers, position players)
+  - These pitchers without ERA data cannot be HQ pitchers by definition
+  PA Coverage: ~87.2% of plate appearances are vs pitchers with ERA data
+  VERDICT: 61.6% name match rate but 87.2% PA coverage - acceptable as non-matched = non-HQ
+
+============================================================
+=== STEP 3 AUDIT: OBP Matching ===
+============================================================
+  Direct name match: 1331 matched / 1694 total = 78.6%
+  Unmatched: 363
+  Key mismatches: FishHook vs 'Fish Hook', HuckFinn vs 'Huck Finn'
+  After hashtag normalization: ~85%+ match rate
+
+=== STEP 4: Building Name Normalization Mappings ===
+  name_mappings: 99 entries inserted
+
+  Name normalization test:
+    'Dr. Seuss' -> 'dr seuss'
+    'O'Bannion' -> 'obannion'
+    'T-Mac' -> 't mac'
+    'Fish Hook' -> 'fish hook'
+    'Huck Finn' -> 'huck finn'
+    'FishHook' -> 'fishhook'
+    'HuckFinn' -> 'huckfinn'
+    'Shirls Jr' -> 'shirls jr'
+    'B Squared' -> 'b squared'
+    'Knooty Booty' -> 'knooty booty'
+
+=== STEP 5: Building HQ Pitcher and Hitter Lists ===
+
+  HQ Pitchers (ERA < 3.5, qualified):
+  2004: 9 HQ pitchers | Truck(1.33), Shirls(1.99), Cota(2.22), J-Ski(2.3), Mathis(2.62), The Pirate(2.67), Sanchez(2.99), Rocket(3.08), CX(3.41)
+  2005: 21 HQ pitchers | Eck(0.35), Doc(1.27), The Man(1.34), CJ(1.38), Cota(1.56), J-Ski(1.6), Costa(1.68), AC(1.84), Shirls(2.04), Tugboat(2.09)
+  2006: 24 HQ pitchers | CJ(0.61), Doc(0.9), Seibs(1.15), T-Bag(1.39), Coop(1.4), Spoon(1.4), Shirls(1.41), Chops(1.72), Dr. Seuss(1.75), Torpedo(1.93)
+  2007: 28 HQ pitchers | Dr. Seuss(0.63), Doc(1.11), Spoon(1.39), Rondell(1.4), Palpatine(1.52), Seibs(1.54), Hartski(1.65), Shirls(1.74), Molgs(1.78), Tugboat(1.83)
+  2008: 25 HQ pitchers | Edgar(0.43), Doc(0.48), Dr. Seuss(0.7), Palpatine(1.22), H9K(1.29), Spoon(1.34), AC(1.46), CJ(1.56), T-Bag(1.6), Tugboat(1.94)
+  2009: 36 HQ pitchers | Shirls(0.52), H9K(0.79), Dr. Seuss(0.94), Seibs(1.17), The Kid(1.22), CJ(1.28), Trans Am(1.32), Tugboat(1.35), Palpatine(1.66), DJ(1.76)
+  2010: 30 HQ pitchers | Box(0.78), CJ(0.96), Dr. Seuss(1.04), Doc(1.13), Palpatine(1.15), Beardface(1.27), Seibs(1.27), Trans Am(1.43), H9K(1.46), Web Gem(1.53)
+  2011: 24 HQ pitchers | Tugboat(0.72), Dr. Seuss(1.18), Rex(1.74), Beardface(1.75), Pork Buoy(1.8), H9K(1.9), Shirls(1.91), The Kid(1.93), CJ(1.96), Web Gem(2.05)
+  2012: 21 HQ pitchers | Beardface(1.01), Tugboat(1.3), Sticks(1.39), The Kid(1.65), Box(1.87), Shirls(1.88), TJ(1.89), Web Gem(1.95), Nightmare(1.97), Torpedo(1.97)
+  2013: 34 HQ pitchers | Monsoon(0.14), Dr. Seuss(0.5), H9K(0.64), Web Gem(0.79), Tugboat(0.81), Shirls(0.86), Hardball(0.91), Sticks(1.13), Edgar(1.24), Nightmare(1.26)
+  2014: 35 HQ pitchers | The Kid(0.49), Dr. Seuss(0.59), Rex(0.65), Handy Mat(0.81), Sticks(0.84), Hardball(0.87), Shirls(0.89), Web Gem(1.07), Boom(1.17), Nine(1.2)
+  2015: 27 HQ pitchers | Dr. Seuss(0.16), Palpatine(0.26), Sticks(0.28), Nightmare(0.92), Hardball(0.96), Beardface(1.04), JC(1.55), Old Yeller(1.69), Shirls(1.74), Santi(2.04)
+  2016: 25 HQ pitchers | Old Yeller(0.82), Dr. Seuss(0.9), Mippey5(1.02), Sticks(1.03), Nutshot(1.27), Web Gem(1.28), Nightmare(1.6), Huck Finn(1.66), Taco(1.79), Palpatine(1.82)
+  2017: 28 HQ pitchers | Dr. Seuss(0.26), Nightmare(0.57), Shandy(0.57), Boom(0.77), Epstein(0.9), Mippey5(1.09), Huck Finn(1.48), DJ(1.71), Thunderson(1.92), Old Yeller(1.95)
+  2018: 35 HQ pitchers | JC(0.79), Dr. Seuss(0.87), Nightmare(0.9), Spaz(1.03), Handy Mat(1.1), Boom(1.42), Taco(1.46), Hardball(1.47), Bliss Jr(1.7), Psych(1.7)
+  2019: 31 HQ pitchers | Dr. Seuss(0.64), Nightmare(0.93), Boom(1.19), Epstein(1.23), Handy Mat(1.28), Old Yeller(1.54), JC(1.68), Hardball(1.74), Taco(1.85), Bliss Jr(1.91)
+  2020: 22 HQ pitchers | Nightmare(0.71), Dr. Seuss(0.89), Griz(1.01), Nickname(1.2), The Man(1.25), Web Gem(1.52), Mippey5(1.56), Epstein(1.87), Lulu(1.89), Psych(1.98)
+  2021: 19 HQ pitchers | JC(1.16), Nightmare(1.33), Dr. Seuss(1.89), Thunderson(2.01), Paper Boy(2.07), Box(2.42), Groundskeeper Willie(2.42), Lulu(2.56), The Wish(2.61), Mippey5(2.76)
+  2022: 14 HQ pitchers | Dumpy(1.83), Dr. Seuss(2.22), Sanchez(2.25), Psych(2.33), Air Jordy(2.43), Knooty Booty(2.59), Nightmare(2.62), Epstein(2.69), Mippey5(2.8), Web Gem(3.0)
+  2023: 15 HQ pitchers | Psych(1.09), Dumpy(1.54), Mippey5(1.58), Epstein(1.66), Dr. Seuss(1.88), Handy Mat(2.17), Z-Dog(2.17), Cakes(2.33), Air Jordy(2.42), Nightmare(2.63)
+  2024: 22 HQ pitchers | Air Jordy(1.17), Stix(1.47), Mippey5(1.7), Psych(1.71), Nightmare(1.92), Handy Mat(2.2), DaVinci(2.22), Griz(2.28), Cakes(2.45), Stache(2.46)
+  2025: 18 HQ pitchers | Mippey5(1.6), DaVinci(1.75), Shipwreck(2.15), T Sea(2.15), Nightmare(2.18), Psych(2.52), Cakes(2.54), Air Jordy(2.57), CatNip(2.59), Pooh Bear(2.77)
+
+  Total hq_pitchers records: 543
+
+  HQ Batters (OBP > 0.35, qualified):
+  2004: 12 HQ batters | Nine(0.486), Chops(0.443), Edgar(0.431), Costa(0.415), J-Ski(0.399), Tom(0.395), Nelson(0.381), Jon(0.363)
+  2005: 24 HQ batters | J-Ski(0.494), Sanchez(0.485), Tugboat(0.475), Nine(0.468), Chops(0.449), Ace(0.426), Neush(0.426), Teen Wolf(0.401)
+  2006: 43 HQ batters | Spoon(0.539), Hobbs(0.519), Fedawg(0.491), J-Ski(0.485), Balls(0.48), Quick(0.464), Lil' Randall(0.444), Steve 1(0.438)
+  2007: 32 HQ batters | Chops(0.473), Panther(0.455), Hendi(0.446), Hobbs(0.436), Dutch(0.43), Edgar(0.426), Sanchez(0.425), Nine(0.423)
+  2008: 38 HQ batters | Chops(0.519), Monsoon(0.491), Spoon(0.449), J-Ski(0.447), Hobbs(0.445), Edgar(0.428), Bliss(0.423), Tugboat(0.423)
+  2009: 45 HQ batters | Chops(0.517), JC(0.502), Tugboat(0.463), Hobbs(0.458), Edgar(0.445), Nine(0.441), Sanchez(0.436), Two Bat(0.43)
+  2010: 39 HQ batters | Tugboat(0.529), JC(0.476), K-Mart(0.476), Pearl(0.476), Spaz(0.473), Focker(0.464), Shirls(0.432), 60 Hz(0.429)
+  2011: 65 HQ batters | Aquaman(0.502), Rex(0.492), TJ(0.483), Beardface(0.474), Cobra Kai(0.471), Torpedo(0.465), Chops(0.463), Flow(0.46)
+  2012: 60 HQ batters | Shirls(0.469), Vlade(0.467), Chops(0.466), Spaz(0.462), Hobbs(0.46), Tugboat(0.453), Sanchez(0.451), Focker(0.45)
+  2013: 60 HQ batters | Handy Mat(0.604), Two Bat(0.507), Bros(0.506), Smallpox(0.506), Tugboat(0.497), Fedawg(0.496), Chops(0.474), Mippey5(0.474)
+  2014: 58 HQ batters | Smallpox(0.579), Seabass(0.523), Fedawg(0.492), Chops(0.481), JC(0.475), Web Gem(0.47), Boom(0.468), Aquaman(0.46)
+  2015: 44 HQ batters | Hondo(0.505), Boom(0.494), Pearl(0.481), Smallpox(0.458), Chops(0.454), Fedawg(0.449), Al(0.446), Seabass(0.444)
+  2016: 45 HQ batters | Hondo(0.503), Pearl(0.497), Sanchez(0.486), TT(0.482), Smallpox(0.476), Beardface(0.462), Shirls(0.457), Chops(0.455)
+  2017: 32 HQ batters | Griz(0.498), Seabass(0.494), Chops(0.493), Mippey5(0.47), Smallpox(0.457), Sanchez(0.447), Rocky(0.441), EAD(0.44)
+  2018: 35 HQ batters | G String(0.536), Torpedo(0.536), EAD(0.492), Psych(0.474), Smallpox(0.466), Web Gem(0.464), JC(0.46), Schnoogens(0.45)
+  2019: 50 HQ batters | Dr. Seuss(0.524), Psych(0.511), Handy Mat(0.51), Mippey5(0.485), Griz(0.479), Box(0.476), Deuce(0.475), Pooh Bear(0.468)
+  2020: 34 HQ batters | Chops(0.513), Daubs(0.469), Smallpox(0.462), Dr. Seuss(0.458), Psych(0.454), Baby Face(0.445), Face(0.441), Griz(0.441)
+  2021: 66 HQ batters | Psych(0.533), Smallpox(0.52), Baby Face(0.513), Epstein(0.512), Chops(0.492), pNut(0.49), Dr. Seuss(0.487), Griz(0.482)
+  2022: 76 HQ batters | Scrabble(0.521), pNut(0.521), Dr. Seuss(0.515), Griz(0.505), Baby Face(0.497), Pooh Bear(0.495), Mehoff(0.488), Psych(0.488)
+  2023: 80 HQ batters | Taco(0.554), Baby Face(0.553), Chops(0.547), Mippey5(0.539), Face(0.525), The Wish(0.525), Griz(0.509), Dr. Seuss(0.507)
+  2024: 75 HQ batters | Chops(0.534), Face(0.506), Mippey5(0.498), Smallpox(0.498), Psych(0.496), TD(0.494), Thor(0.491), Knipples(0.487)
+  2025: 84 HQ batters | Griz(0.551), Smallpox(0.549), The Wish(0.525), Baby Face(0.52), Meow(0.509), Stix(0.509), Face(0.502), Web Gem(0.5)
+
+  Total hq_batters records: 1097
+
+=== STEP 6: Calculating HQ Batting Splits ===
+  HQ pitcher lookup entries: 543
+  BvP rows to process: 2203
+  Rows matched to HQ pitchers: 626, unmatched: 1577
+
+  OPS Sanity Check Warnings:
+  WARNING: Anakin 2025 HQ OPS (1.988) > overall OPS (1.635) by 0.353
+  WARNING: Epstein 2022 HQ OPS (1.587) > overall OPS (1.339) by 0.248
+
+  Records saved: 69
+  Qualified records (10+ PA): 69
+
+=== STEP 7: Calculating HQ Pitching Splits ===
+  HQ batter lookup entries: 1097
+  Total pitchers in BvP as opposing_pitcher: 287
+  Pitcher-season splits calculated: 668
+
+  HQ pitching splits saved: 665
+  Qualified (10+ PA): 281
+
+  Vibes pitchers vs HQ batters:
+  CatNip:
+    2019: PA=11, H=4, HR=2, BB=1, SO=2, OBP-against=0.455, qualifies=1
+  Epstein:
+    2019: PA=13, H=2, HR=1, BB=0, SO=4, OBP-against=0.154, qualifies=1
+    2020: PA=9, H=3, HR=0, BB=2, SO=2, OBP-against=0.556, qualifies=0
+    2021: PA=5, H=0, HR=0, BB=2, SO=1, OBP-against=0.4, qualifies=0
+    2024: PA=4, H=1, HR=1, BB=0, SO=1, OBP-against=0.25, qualifies=0
+  FishHook:
+    2020: PA=5, H=0, HR=0, BB=1, SO=0, OBP-against=0.2, qualifies=0
+  HuckFinn:
+    2019: PA=3, H=0, HR=0, BB=0, SO=2, OBP-against=0.0, qualifies=0
+    2021: PA=5, H=3, HR=1, BB=0, SO=0, OBP-against=0.6, qualifies=0
+    2024: PA=5, H=1, HR=0, BB=0, SO=1, OBP-against=0.2, qualifies=0
+  Kar:
+    2021: PA=5, H=4, HR=2, BB=0, SO=1, OBP-against=0.8, qualifies=0
+  Nightmare:
+    2016: PA=5, H=1, HR=1, BB=2, SO=0, OBP-against=0.6, qualifies=0
+    2018: PA=10, H=1, HR=1, BB=0, SO=4, OBP-against=0.1, qualifies=1
+    2019: PA=13, H=0, HR=0, BB=0, SO=9, OBP-against=0.0, qualifies=1
+    2020: PA=11, H=1, HR=0, BB=1, SO=6, OBP-against=0.182, qualifies=1
+    2021: PA=12, H=0, HR=0, BB=0, SO=8, OBP-against=0.0, qualifies=1
+    2022: PA=17, H=5, HR=4, BB=1, SO=5, OBP-against=0.353, qualifies=1
+
+=== STEP 8: Calculating HQ Percentile Rankings ===
+
+  Batting vs HQ Pitcher percentiles:
+  2007: pool too thin (1) - skipping
+  2008: pool too thin (1) - skipping
+  2009: pool too thin (1) - skipping
+  2010: pool too thin (1) - skipping
+  2011: pool too thin (1) - skipping
+  2012: pool too thin (1) - skipping
+  2013: *** THIN POOL (2 players)
+  2014: *** THIN POOL (2 players)
+  2015: *** THIN POOL (2 players)
+  2016: *** THIN POOL (4 players)
+  2017: *** THIN POOL (4 players)
+  2018: *** THIN POOL (4 players)
+  2019: pool_size=6
+  2020: pool_size=7
+  2021: pool_size=6
+  2022: pool_size=6
+  2023: pool_size=6
+  2024: pool_size=7
+  2025: pool_size=7
+  Total batting HQ percentile records inserted: 619
+
+  Pitching vs HQ Hitter percentiles:
+  2011: *** THIN POOL (2 pitchers)
+  2013: pool_size=13
+  2015: *** THIN POOL (2 pitchers)
+  2016: *** THIN POOL (2 pitchers)
+  2017: *** THIN POOL (2 pitchers)
+  2018: pool_size=18
+  2019: pool_size=36
+  2020: pool_size=24
+  2021: pool_size=37
+  2022: pool_size=33
+  2023: pool_size=37
+  2024: pool_size=37
+  2025: pool_size=37
+  Total pitching HQ percentile records inserted: 3181
+
+=== VERIFICATION: Final DB State ===
+
+  Epstein 2025 HQ batting split:
+    PA=42, AB=35, H=5, HR=3, BB=7, SO=16
+    AVG=0.143, OBP=0.286, SLG=0.4, OPS=0.686
+    BB%=0.167, K%=0.381, ISO=0.257, BABIP=0.125
+    Qualifies: 1
+  CatNip 2025: no HQ pitching split (may not have pitched or <1 HQ batter faced)
+
+  Total hq_opponent_splits records: 734
+  Qualified batting (10+ PA): 69
+  Qualified pitching (10+ PA): 281
+  HQ percentile records in percentile_rankings: 619
+
+  Epstein 2025 HQ percentiles:
+    hq_ab_hr: 11.7 -> 71th pct [Q] (pool=7)
+    hq_avg: 0.143 -> 1th pct [Q] (pool=7)
+    hq_babip: 0.125 -> 14th pct [Q] (pool=7)
+    hq_bb_k: 0.438 -> 43th pct [Q] (pool=7)
+    hq_bb_pct: 0.167 -> 71th pct [Q] (pool=7)
+    hq_iso: 0.257 -> 71th pct [Q] (pool=7)
+    hq_k_pct: 0.381 -> 1th pct [Q] (pool=7)
+    hq_obp: 0.286 -> 29th pct [Q] (pool=7)
+    hq_ops: 0.686 -> 29th pct [Q] (pool=7)
+    hq_slg: 0.4 -> 57th pct [Q] (pool=7)
+
+============================================================
+HQ PIPELINE COMPLETE: 2026-03-28 01:30:53
+============================================================
+
+============================================================
+HQ PIPELINE STARTED: 2026-03-28 01:34:13
+============================================================
+
+============================================================
+=== STEP 1 AUDIT RESULTS ===
+============================================================
+1. Total rows in batter_vs_pitcher: 71296
+2. Unique batters: 262
+3. Unique opposing pitchers: 497
+4. Sample 10 rows: [see query output above]
+5. Seasons covered:
+   2004: 433 records
+   2005: 1385 records
+   2006: 2011 records
+   2007: 2174 records
+   2008: 2160 records
+   2009: 2086 records
+   2010: 2422 records
+   2011: 2565 records
+   2012: 2560 records
+   2013: 2829 records
+   2014: 2237 records
+   2015: 1968 records
+   2016: 2280 records
+   2017: 2092 records
+   2018: 2222 records
+   2019: 2441 records
+   2020: 1244 records
+   2021: 2162 records
+   2022: 2428 records
+   2023: 2573 records
+   2024: 2525 records
+   2025: 2492 records
+   Career: 24007 records
+6. Vibes players with BvP data:
+   Anakin: 129 records (2020-Career)
+   CatNip: 273 records (2019-Career)
+   Cheerio: 470 records (2016-Career)
+   Epstein: 477 records (2016-Career)
+   FishHook: 329 records (2019-Career)
+   Fortnite: 14 records (2023-Career)
+   HuckFinn: 575 records (2013-Career)
+   Jessie: 2 records (2025-Career)
+   Kar: 5 records (2021-Career)
+   Nightmare: 915 records (2007-Career)
+7. PA check Epstein 2025: BvP=217, batting_stats=217 - MATCH
+8. Vibes players with 0 BvP records: Jessie (2 records only), Kar (5 records only), Fortnite (14 records only)
+9. Non-Vibes unique players in BvP: 252
+10. Diagnosis: BvP table uses hashtag format for Vibes players (FishHook, HuckFinn)
+    league_batting_stats uses display names (Fish Hook, Huck Finn)
+    league_pitching_stats uses display names for both
+    PA check passes perfectly (217 for Epstein 2025)
+
+============================================================
+=== STEP 2 AUDIT: ERA Matching ===
+============================================================
+  Direct name match: 1506 matched / 2446 total = 61.6%
+  Unmatched: 940
+  Root causes:
+  - Some pitchers appear in BvP but not in league_pitching_stats (occasional pitchers, position players)
+  - These pitchers without ERA data cannot be HQ pitchers by definition
+  PA Coverage: ~87.2% of plate appearances are vs pitchers with ERA data
+  VERDICT: 61.6% name match rate but 87.2% PA coverage - acceptable as non-matched = non-HQ
+
+============================================================
+=== STEP 3 AUDIT: OBP Matching ===
+============================================================
+  Direct name match: 1331 matched / 1694 total = 78.6%
+  Unmatched: 363
+  Key mismatches: FishHook vs 'Fish Hook', HuckFinn vs 'Huck Finn'
+  After hashtag normalization: ~85%+ match rate
+
+=== STEP 4: Building Name Normalization Mappings ===
+  name_mappings: 99 entries inserted
+
+  Name normalization test:
+    'Dr. Seuss' -> 'dr seuss'
+    'O'Bannion' -> 'obannion'
+    'T-Mac' -> 't mac'
+    'Fish Hook' -> 'fish hook'
+    'Huck Finn' -> 'huck finn'
+    'FishHook' -> 'fishhook'
+    'HuckFinn' -> 'huckfinn'
+    'Shirls Jr' -> 'shirls jr'
+    'B Squared' -> 'b squared'
+    'Knooty Booty' -> 'knooty booty'
+
+=== STEP 5: Building HQ Pitcher and Hitter Lists ===
+
+  HQ Pitchers (ERA < 3.5, qualified):
+  2004: 9 HQ pitchers | Truck(1.33), Shirls(1.99), Cota(2.22), J-Ski(2.3), Mathis(2.62), The Pirate(2.67), Sanchez(2.99), Rocket(3.08), CX(3.41)
+  2005: 21 HQ pitchers | Eck(0.35), Doc(1.27), The Man(1.34), CJ(1.38), Cota(1.56), J-Ski(1.6), Costa(1.68), AC(1.84), Shirls(2.04), Tugboat(2.09)
+  2006: 24 HQ pitchers | CJ(0.61), Doc(0.9), Seibs(1.15), T-Bag(1.39), Coop(1.4), Spoon(1.4), Shirls(1.41), Chops(1.72), Dr. Seuss(1.75), Torpedo(1.93)
+  2007: 28 HQ pitchers | Dr. Seuss(0.63), Doc(1.11), Spoon(1.39), Rondell(1.4), Palpatine(1.52), Seibs(1.54), Hartski(1.65), Shirls(1.74), Molgs(1.78), Tugboat(1.83)
+  2008: 25 HQ pitchers | Edgar(0.43), Doc(0.48), Dr. Seuss(0.7), Palpatine(1.22), H9K(1.29), Spoon(1.34), AC(1.46), CJ(1.56), T-Bag(1.6), Tugboat(1.94)
+  2009: 36 HQ pitchers | Shirls(0.52), H9K(0.79), Dr. Seuss(0.94), Seibs(1.17), The Kid(1.22), CJ(1.28), Trans Am(1.32), Tugboat(1.35), Palpatine(1.66), DJ(1.76)
+  2010: 30 HQ pitchers | Box(0.78), CJ(0.96), Dr. Seuss(1.04), Doc(1.13), Palpatine(1.15), Beardface(1.27), Seibs(1.27), Trans Am(1.43), H9K(1.46), Web Gem(1.53)
+  2011: 24 HQ pitchers | Tugboat(0.72), Dr. Seuss(1.18), Rex(1.74), Beardface(1.75), Pork Buoy(1.8), H9K(1.9), Shirls(1.91), The Kid(1.93), CJ(1.96), Web Gem(2.05)
+  2012: 21 HQ pitchers | Beardface(1.01), Tugboat(1.3), Sticks(1.39), The Kid(1.65), Box(1.87), Shirls(1.88), TJ(1.89), Web Gem(1.95), Nightmare(1.97), Torpedo(1.97)
+  2013: 34 HQ pitchers | Monsoon(0.14), Dr. Seuss(0.5), H9K(0.64), Web Gem(0.79), Tugboat(0.81), Shirls(0.86), Hardball(0.91), Sticks(1.13), Edgar(1.24), Nightmare(1.26)
+  2014: 35 HQ pitchers | The Kid(0.49), Dr. Seuss(0.59), Rex(0.65), Handy Mat(0.81), Sticks(0.84), Hardball(0.87), Shirls(0.89), Web Gem(1.07), Boom(1.17), Nine(1.2)
+  2015: 27 HQ pitchers | Dr. Seuss(0.16), Palpatine(0.26), Sticks(0.28), Nightmare(0.92), Hardball(0.96), Beardface(1.04), JC(1.55), Old Yeller(1.69), Shirls(1.74), Santi(2.04)
+  2016: 25 HQ pitchers | Old Yeller(0.82), Dr. Seuss(0.9), Mippey5(1.02), Sticks(1.03), Nutshot(1.27), Web Gem(1.28), Nightmare(1.6), Huck Finn(1.66), Taco(1.79), Palpatine(1.82)
+  2017: 28 HQ pitchers | Dr. Seuss(0.26), Nightmare(0.57), Shandy(0.57), Boom(0.77), Epstein(0.9), Mippey5(1.09), Huck Finn(1.48), DJ(1.71), Thunderson(1.92), Old Yeller(1.95)
+  2018: 35 HQ pitchers | JC(0.79), Dr. Seuss(0.87), Nightmare(0.9), Spaz(1.03), Handy Mat(1.1), Boom(1.42), Taco(1.46), Hardball(1.47), Bliss Jr(1.7), Psych(1.7)
+  2019: 31 HQ pitchers | Dr. Seuss(0.64), Nightmare(0.93), Boom(1.19), Epstein(1.23), Handy Mat(1.28), Old Yeller(1.54), JC(1.68), Hardball(1.74), Taco(1.85), Bliss Jr(1.91)
+  2020: 22 HQ pitchers | Nightmare(0.71), Dr. Seuss(0.89), Griz(1.01), Nickname(1.2), The Man(1.25), Web Gem(1.52), Mippey5(1.56), Epstein(1.87), Lulu(1.89), Psych(1.98)
+  2021: 19 HQ pitchers | JC(1.16), Nightmare(1.33), Dr. Seuss(1.89), Thunderson(2.01), Paper Boy(2.07), Box(2.42), Groundskeeper Willie(2.42), Lulu(2.56), The Wish(2.61), Mippey5(2.76)
+  2022: 14 HQ pitchers | Dumpy(1.83), Dr. Seuss(2.22), Sanchez(2.25), Psych(2.33), Air Jordy(2.43), Knooty Booty(2.59), Nightmare(2.62), Epstein(2.69), Mippey5(2.8), Web Gem(3.0)
+  2023: 15 HQ pitchers | Psych(1.09), Dumpy(1.54), Mippey5(1.58), Epstein(1.66), Dr. Seuss(1.88), Handy Mat(2.17), Z-Dog(2.17), Cakes(2.33), Air Jordy(2.42), Nightmare(2.63)
+  2024: 22 HQ pitchers | Air Jordy(1.17), Stix(1.47), Mippey5(1.7), Psych(1.71), Nightmare(1.92), Handy Mat(2.2), DaVinci(2.22), Griz(2.28), Cakes(2.45), Stache(2.46)
+  2025: 18 HQ pitchers | Mippey5(1.6), DaVinci(1.75), Shipwreck(2.15), T Sea(2.15), Nightmare(2.18), Psych(2.52), Cakes(2.54), Air Jordy(2.57), CatNip(2.59), Pooh Bear(2.77)
+
+  Total hq_pitchers records: 543
+
+  HQ Batters (OBP > 0.35, qualified):
+  2004: 12 HQ batters | Nine(0.486), Chops(0.443), Edgar(0.431), Costa(0.415), J-Ski(0.399), Tom(0.395), Nelson(0.381), Jon(0.363)
+  2005: 24 HQ batters | J-Ski(0.494), Sanchez(0.485), Tugboat(0.475), Nine(0.468), Chops(0.449), Ace(0.426), Neush(0.426), Teen Wolf(0.401)
+  2006: 43 HQ batters | Spoon(0.539), Hobbs(0.519), Fedawg(0.491), J-Ski(0.485), Balls(0.48), Quick(0.464), Lil' Randall(0.444), Steve 1(0.438)
+  2007: 32 HQ batters | Chops(0.473), Panther(0.455), Hendi(0.446), Hobbs(0.436), Dutch(0.43), Edgar(0.426), Sanchez(0.425), Nine(0.423)
+  2008: 38 HQ batters | Chops(0.519), Monsoon(0.491), Spoon(0.449), J-Ski(0.447), Hobbs(0.445), Edgar(0.428), Bliss(0.423), Tugboat(0.423)
+  2009: 45 HQ batters | Chops(0.517), JC(0.502), Tugboat(0.463), Hobbs(0.458), Edgar(0.445), Nine(0.441), Sanchez(0.436), Two Bat(0.43)
+  2010: 39 HQ batters | Tugboat(0.529), JC(0.476), K-Mart(0.476), Pearl(0.476), Spaz(0.473), Focker(0.464), Shirls(0.432), 60 Hz(0.429)
+  2011: 65 HQ batters | Aquaman(0.502), Rex(0.492), TJ(0.483), Beardface(0.474), Cobra Kai(0.471), Torpedo(0.465), Chops(0.463), Flow(0.46)
+  2012: 60 HQ batters | Shirls(0.469), Vlade(0.467), Chops(0.466), Spaz(0.462), Hobbs(0.46), Tugboat(0.453), Sanchez(0.451), Focker(0.45)
+  2013: 60 HQ batters | Handy Mat(0.604), Two Bat(0.507), Bros(0.506), Smallpox(0.506), Tugboat(0.497), Fedawg(0.496), Chops(0.474), Mippey5(0.474)
+  2014: 58 HQ batters | Smallpox(0.579), Seabass(0.523), Fedawg(0.492), Chops(0.481), JC(0.475), Web Gem(0.47), Boom(0.468), Aquaman(0.46)
+  2015: 44 HQ batters | Hondo(0.505), Boom(0.494), Pearl(0.481), Smallpox(0.458), Chops(0.454), Fedawg(0.449), Al(0.446), Seabass(0.444)
+  2016: 45 HQ batters | Hondo(0.503), Pearl(0.497), Sanchez(0.486), TT(0.482), Smallpox(0.476), Beardface(0.462), Shirls(0.457), Chops(0.455)
+  2017: 32 HQ batters | Griz(0.498), Seabass(0.494), Chops(0.493), Mippey5(0.47), Smallpox(0.457), Sanchez(0.447), Rocky(0.441), EAD(0.44)
+  2018: 35 HQ batters | G String(0.536), Torpedo(0.536), EAD(0.492), Psych(0.474), Smallpox(0.466), Web Gem(0.464), JC(0.46), Schnoogens(0.45)
+  2019: 50 HQ batters | Dr. Seuss(0.524), Psych(0.511), Handy Mat(0.51), Mippey5(0.485), Griz(0.479), Box(0.476), Deuce(0.475), Pooh Bear(0.468)
+  2020: 34 HQ batters | Chops(0.513), Daubs(0.469), Smallpox(0.462), Dr. Seuss(0.458), Psych(0.454), Baby Face(0.445), Face(0.441), Griz(0.441)
+  2021: 66 HQ batters | Psych(0.533), Smallpox(0.52), Baby Face(0.513), Epstein(0.512), Chops(0.492), pNut(0.49), Dr. Seuss(0.487), Griz(0.482)
+  2022: 76 HQ batters | Scrabble(0.521), pNut(0.521), Dr. Seuss(0.515), Griz(0.505), Baby Face(0.497), Pooh Bear(0.495), Mehoff(0.488), Psych(0.488)
+  2023: 80 HQ batters | Taco(0.554), Baby Face(0.553), Chops(0.547), Mippey5(0.539), Face(0.525), The Wish(0.525), Griz(0.509), Dr. Seuss(0.507)
+  2024: 75 HQ batters | Chops(0.534), Face(0.506), Mippey5(0.498), Smallpox(0.498), Psych(0.496), TD(0.494), Thor(0.491), Knipples(0.487)
+  2025: 84 HQ batters | Griz(0.551), Smallpox(0.549), The Wish(0.525), Baby Face(0.52), Meow(0.509), Stix(0.509), Face(0.502), Web Gem(0.5)
+
+  Total hq_batters records: 1097
+
+=== STEP 6: Calculating HQ Batting Splits ===
+  HQ pitcher lookup entries: 543
+  BvP rows to process: 2203
+  Rows matched to HQ pitchers: 626, unmatched: 1577
+
+  OPS Sanity Check Warnings:
+  WARNING: Anakin 2025 HQ OPS (1.988) > overall OPS (1.635) by 0.353
+  WARNING: Epstein 2022 HQ OPS (1.587) > overall OPS (1.339) by 0.248
+
+  Records saved: 69
+  Qualified records (10+ PA): 69
+
+=== STEP 7: Calculating HQ Pitching Splits ===
+  HQ batter lookup entries: 1097
+  Total pitchers in BvP as opposing_pitcher: 287
+  Pitcher-season splits calculated: 2344
+
+  HQ pitching splits saved: 2334
+  Qualified (10+ PA): 2062
+
+  Vibes pitchers vs HQ batters:
+  Anakin:
+    2020: PA=11, H=4, HR=1, BB=0, SO=0, OBP-against=0.364, qualifies=1
+  CatNip:
+    2019: PA=79, H=16, HR=6, BB=14, SO=24, OBP-against=0.38, qualifies=1
+    2020: PA=15, H=4, HR=0, BB=2, SO=4, OBP-against=0.4, qualifies=1
+    2021: PA=20, H=4, HR=2, BB=6, SO=4, OBP-against=0.5, qualifies=1
+    2022: PA=64, H=13, HR=4, BB=6, SO=16, OBP-against=0.297, qualifies=1
+    2023: PA=22, H=4, HR=2, BB=1, SO=14, OBP-against=0.227, qualifies=1
+    2024: PA=11, H=2, HR=1, BB=2, SO=6, OBP-against=0.364, qualifies=1
+    2025: PA=37, H=3, HR=0, BB=6, SO=11, OBP-against=0.243, qualifies=1
+  Cheerio:
+    2018: PA=6, H=3, HR=0, BB=2, SO=0, OBP-against=0.833, qualifies=0
+    2019: PA=8, H=3, HR=3, BB=1, SO=0, OBP-against=0.5, qualifies=0
+    2020: PA=3, H=2, HR=0, BB=1, SO=0, OBP-against=1.0, qualifies=0
+    2022: PA=3, H=1, HR=1, BB=1, SO=0, OBP-against=0.667, qualifies=0
+    2023: PA=2, H=0, HR=0, BB=1, SO=0, OBP-against=0.5, qualifies=0
+  Epstein:
+    2016: PA=102, H=21, HR=8, BB=18, SO=23, OBP-against=0.382, qualifies=1
+    2017: PA=68, H=10, HR=2, BB=6, SO=28, OBP-against=0.239, qualifies=1
+    2018: PA=89, H=22, HR=9, BB=3, SO=25, OBP-against=0.281, qualifies=1
+    2019: PA=95, H=18, HR=6, BB=1, SO=33, OBP-against=0.2, qualifies=1
+    2020: PA=78, H=15, HR=4, BB=8, SO=22, OBP-against=0.295, qualifies=1
+    2021: PA=162, H=49, HR=8, BB=19, SO=46, OBP-against=0.422, qualifies=1
+    2022: PA=125, H=29, HR=5, BB=5, SO=45, OBP-against=0.272, qualifies=1
+    2023: PA=94, H=19, HR=2, BB=4, SO=37, OBP-against=0.245, qualifies=1
+    2024: PA=137, H=29, HR=9, BB=12, SO=41, OBP-against=0.299, qualifies=1
+    2025: PA=95, H=23, HR=7, BB=15, SO=27, OBP-against=0.4, qualifies=1
+  FishHook:
+    2019: PA=2, H=0, HR=0, BB=1, SO=0, OBP-against=0.5, qualifies=0
+    2020: PA=99, H=14, HR=7, BB=25, SO=18, OBP-against=0.394, qualifies=1
+    2021: PA=43, H=10, HR=3, BB=9, SO=2, OBP-against=0.442, qualifies=1
+    2022: PA=29, H=11, HR=3, BB=8, SO=1, OBP-against=0.655, qualifies=1
+    2023: PA=25, H=5, HR=1, BB=4, SO=4, OBP-against=0.36, qualifies=1
+    2024: PA=20, H=7, HR=1, BB=5, SO=2, OBP-against=0.6, qualifies=1
+    2025: PA=36, H=11, HR=3, BB=11, SO=3, OBP-against=0.611, qualifies=1
+  HuckFinn:
+    2013: PA=83, H=21, HR=5, BB=6, SO=26, OBP-against=0.325, qualifies=1
+    2014: PA=59, H=10, HR=2, BB=3, SO=14, OBP-against=0.22, qualifies=1
+    2015: PA=128, H=27, HR=10, BB=19, SO=35, OBP-against=0.359, qualifies=1
+    2016: PA=106, H=14, HR=4, BB=6, SO=36, OBP-against=0.189, qualifies=1
+    2017: PA=61, H=10, HR=2, BB=2, SO=23, OBP-against=0.197, qualifies=1
+    2018: PA=55, H=18, HR=5, BB=4, SO=17, OBP-against=0.4, qualifies=1
+    2019: PA=94, H=15, HR=7, BB=6, SO=39, OBP-against=0.223, qualifies=1
+    2020: PA=35, H=10, HR=2, BB=1, SO=11, OBP-against=0.314, qualifies=1
+    2021: PA=156, H=51, HR=14, BB=15, SO=32, OBP-against=0.429, qualifies=1
+    2022: PA=89, H=13, HR=2, BB=10, SO=19, OBP-against=0.258, qualifies=1
+    2023: PA=97, H=23, HR=7, BB=10, SO=31, OBP-against=0.34, qualifies=1
+    2024: PA=115, H=28, HR=13, BB=9, SO=23, OBP-against=0.325, qualifies=1
+    2025: PA=87, H=23, HR=7, BB=8, SO=28, OBP-against=0.356, qualifies=1
+  Jessie:
+    2025: PA=3, H=0, HR=0, BB=0, SO=0, OBP-against=0.0, qualifies=0
+  Kar:
+    2021: PA=9, H=5, HR=2, BB=1, SO=1, OBP-against=0.667, qualifies=0
+    2022: PA=7, H=2, HR=0, BB=0, SO=0, OBP-against=0.333, qualifies=0
+    2023: PA=5, H=2, HR=0, BB=0, SO=2, OBP-against=0.4, qualifies=0
+  Nightmare:
+    2007: PA=35, H=2, HR=0, BB=15, SO=11, OBP-against=0.486, qualifies=1
+    2008: PA=67, H=11, HR=4, BB=19, SO=14, OBP-against=0.448, qualifies=1
+    2009: PA=47, H=10, HR=2, BB=2, SO=21, OBP-against=0.255, qualifies=1
+    2010: PA=37, H=8, HR=2, BB=6, SO=11, OBP-against=0.378, qualifies=1
+    2011: PA=154, H=23, HR=6, BB=28, SO=43, OBP-against=0.333, qualifies=1
+    2012: PA=115, H=24, HR=2, BB=11, SO=41, OBP-against=0.304, qualifies=1
+    2013: PA=95, H=11, HR=2, BB=13, SO=32, OBP-against=0.253, qualifies=1
+    2014: PA=28, H=5, HR=2, BB=3, SO=13, OBP-against=0.286, qualifies=1
+    2015: PA=50, H=7, HR=1, BB=7, SO=11, OBP-against=0.28, qualifies=1
+    2016: PA=69, H=11, HR=3, BB=14, SO=24, OBP-against=0.362, qualifies=1
+    2017: PA=42, H=6, HR=1, BB=2, SO=17, OBP-against=0.19, qualifies=1
+    2018: PA=92, H=13, HR=1, BB=7, SO=33, OBP-against=0.217, qualifies=1
+    2019: PA=61, H=8, HR=1, BB=5, SO=26, OBP-against=0.213, qualifies=1
+    2020: PA=46, H=4, HR=0, BB=1, SO=25, OBP-against=0.109, qualifies=1
+    2021: PA=79, H=9, HR=0, BB=8, SO=33, OBP-against=0.215, qualifies=1
+    2022: PA=126, H=28, HR=6, BB=10, SO=39, OBP-against=0.302, qualifies=1
+    2023: PA=86, H=17, HR=3, BB=11, SO=29, OBP-against=0.326, qualifies=1
+    2024: PA=109, H=22, HR=2, BB=9, SO=30, OBP-against=0.284, qualifies=1
+    2025: PA=84, H=12, HR=3, BB=11, SO=31, OBP-against=0.274, qualifies=1
+  Fortnite:
+    2023: PA=3, H=0, HR=0, BB=2, SO=0, OBP-against=0.667, qualifies=0
+    2025: PA=2, H=1, HR=0, BB=1, SO=0, OBP-against=1.0, qualifies=0
+
+=== STEP 8: Calculating HQ Percentile Rankings ===
+
+  Batting vs HQ Pitcher percentiles:
+  2007: pool too thin (1) - skipping
+  2008: pool too thin (1) - skipping
+  2009: pool too thin (1) - skipping
+  2010: pool too thin (1) - skipping
+  2011: pool too thin (1) - skipping
+  2012: pool too thin (1) - skipping
+  2013: *** THIN POOL (2 players)
+  2014: *** THIN POOL (2 players)
+  2015: *** THIN POOL (2 players)
+  2016: *** THIN POOL (4 players)
+  2017: *** THIN POOL (4 players)
+  2018: *** THIN POOL (4 players)
+  2019: pool_size=6
+  2020: pool_size=7
+  2021: pool_size=6
+  2022: pool_size=6
+  2023: pool_size=6
+  2024: pool_size=7
+  2025: pool_size=7
+  Total batting HQ percentile records inserted: 619
+
+  Pitching vs HQ Hitter percentiles:
+  2004: pool_size=32
+  2005: pool_size=59
+  2006: pool_size=72
+  2007: pool_size=73
+  2008: pool_size=78
+  2009: pool_size=97
+  2010: pool_size=94
+  2011: pool_size=108
+  2012: pool_size=103
+  2013: pool_size=126
+  2014: pool_size=107
+  2015: pool_size=83
+  2016: pool_size=100
+  2017: pool_size=98
+  2018: pool_size=103
+  2019: pool_size=107
+  2020: pool_size=74
+  2021: pool_size=105
+  2022: pool_size=109
+  2023: pool_size=119
+  2024: pool_size=103
+  2025: pool_size=112
+  Total pitching HQ percentile records inserted: 11650
+
+=== VERIFICATION: Final DB State ===
+
+  Epstein 2025 HQ batting split:
+    PA=42, AB=35, H=5, HR=3, BB=7, SO=16
+    AVG=0.143, OBP=0.286, SLG=0.4, OPS=0.686
+    BB%=0.167, K%=0.381, ISO=0.257, BABIP=0.125
+    Qualifies: 1
+
+  CatNip 2025 HQ pitching split (vs HQ hitters):
+    PA=37, AB=31, H=3, HR=0, BB=6, SO=11
+    BAA=0.097, OBP-against=0.243, OPS-against=0.34
+    K%=1.222, BB%=0.667
+    Qualifies: 1
+
+  Total hq_opponent_splits records: 2403
+  Qualified batting (10+ PA): 69
+  Qualified pitching (10+ PA): 2062
+  HQ percentile records in percentile_rankings: 619
+
+  Epstein 2025 HQ percentiles:
+    hq_ab_hr: 11.7 -> 71th pct [Q] (pool=7)
+    hq_avg: 0.143 -> 1th pct [Q] (pool=7)
+    hq_babip: 0.125 -> 14th pct [Q] (pool=7)
+    hq_bb_k: 0.438 -> 43th pct [Q] (pool=7)
+    hq_bb_pct: 0.167 -> 71th pct [Q] (pool=7)
+    hq_iso: 0.257 -> 71th pct [Q] (pool=7)
+    hq_k_pct: 0.381 -> 1th pct [Q] (pool=7)
+    hq_obp: 0.286 -> 29th pct [Q] (pool=7)
+    hq_ops: 0.686 -> 29th pct [Q] (pool=7)
+    hq_slg: 0.4 -> 57th pct [Q] (pool=7)
+
+============================================================
+HQ PIPELINE COMPLETE: 2026-03-28 01:34:13
+============================================================
+
+============================================================
+HQ PIPELINE STARTED: 2026-03-28 01:34:17
+============================================================
+
+============================================================
+=== STEP 1 AUDIT RESULTS ===
+============================================================
+1. Total rows in batter_vs_pitcher: 71296
+2. Unique batters: 262
+3. Unique opposing pitchers: 497
+4. Sample 10 rows: [see query output above]
+5. Seasons covered:
+   2004: 433 records
+   2005: 1385 records
+   2006: 2011 records
+   2007: 2174 records
+   2008: 2160 records
+   2009: 2086 records
+   2010: 2422 records
+   2011: 2565 records
+   2012: 2560 records
+   2013: 2829 records
+   2014: 2237 records
+   2015: 1968 records
+   2016: 2280 records
+   2017: 2092 records
+   2018: 2222 records
+   2019: 2441 records
+   2020: 1244 records
+   2021: 2162 records
+   2022: 2428 records
+   2023: 2573 records
+   2024: 2525 records
+   2025: 2492 records
+   Career: 24007 records
+6. Vibes players with BvP data:
+   Anakin: 129 records (2020-Career)
+   CatNip: 273 records (2019-Career)
+   Cheerio: 470 records (2016-Career)
+   Epstein: 477 records (2016-Career)
+   FishHook: 329 records (2019-Career)
+   Fortnite: 14 records (2023-Career)
+   HuckFinn: 575 records (2013-Career)
+   Jessie: 2 records (2025-Career)
+   Kar: 5 records (2021-Career)
+   Nightmare: 915 records (2007-Career)
+7. PA check Epstein 2025: BvP=217, batting_stats=217 - MATCH
+8. Vibes players with 0 BvP records: Jessie (2 records only), Kar (5 records only), Fortnite (14 records only)
+9. Non-Vibes unique players in BvP: 252
+10. Diagnosis: BvP table uses hashtag format for Vibes players (FishHook, HuckFinn)
+    league_batting_stats uses display names (Fish Hook, Huck Finn)
+    league_pitching_stats uses display names for both
+    PA check passes perfectly (217 for Epstein 2025)
+
+============================================================
+=== STEP 2 AUDIT: ERA Matching ===
+============================================================
+  Direct name match: 1506 matched / 2446 total = 61.6%
+  Unmatched: 940
+  Root causes:
+  - Some pitchers appear in BvP but not in league_pitching_stats (occasional pitchers, position players)
+  - These pitchers without ERA data cannot be HQ pitchers by definition
+  PA Coverage: ~87.2% of plate appearances are vs pitchers with ERA data
+  VERDICT: 61.6% name match rate but 87.2% PA coverage - acceptable as non-matched = non-HQ
+
+============================================================
+=== STEP 3 AUDIT: OBP Matching ===
+============================================================
+  Direct name match: 1331 matched / 1694 total = 78.6%
+  Unmatched: 363
+  Key mismatches: FishHook vs 'Fish Hook', HuckFinn vs 'Huck Finn'
+  After hashtag normalization: ~85%+ match rate
+
+=== STEP 4: Building Name Normalization Mappings ===
+  name_mappings: 99 entries inserted
+
+  Name normalization test:
+    'Dr. Seuss' -> 'dr seuss'
+    'O'Bannion' -> 'obannion'
+    'T-Mac' -> 't mac'
+    'Fish Hook' -> 'fish hook'
+    'Huck Finn' -> 'huck finn'
+    'FishHook' -> 'fishhook'
+    'HuckFinn' -> 'huckfinn'
+    'Shirls Jr' -> 'shirls jr'
+    'B Squared' -> 'b squared'
+    'Knooty Booty' -> 'knooty booty'
+
+=== STEP 5: Building HQ Pitcher and Hitter Lists ===
+
+  HQ Pitchers (ERA < 3.5, qualified):
+  2004: 9 HQ pitchers | Truck(1.33), Shirls(1.99), Cota(2.22), J-Ski(2.3), Mathis(2.62), The Pirate(2.67), Sanchez(2.99), Rocket(3.08), CX(3.41)
+  2005: 21 HQ pitchers | Eck(0.35), Doc(1.27), The Man(1.34), CJ(1.38), Cota(1.56), J-Ski(1.6), Costa(1.68), AC(1.84), Shirls(2.04), Tugboat(2.09)
+  2006: 24 HQ pitchers | CJ(0.61), Doc(0.9), Seibs(1.15), T-Bag(1.39), Coop(1.4), Spoon(1.4), Shirls(1.41), Chops(1.72), Dr. Seuss(1.75), Torpedo(1.93)
+  2007: 28 HQ pitchers | Dr. Seuss(0.63), Doc(1.11), Spoon(1.39), Rondell(1.4), Palpatine(1.52), Seibs(1.54), Hartski(1.65), Shirls(1.74), Molgs(1.78), Tugboat(1.83)
+  2008: 25 HQ pitchers | Edgar(0.43), Doc(0.48), Dr. Seuss(0.7), Palpatine(1.22), H9K(1.29), Spoon(1.34), AC(1.46), CJ(1.56), T-Bag(1.6), Tugboat(1.94)
+  2009: 36 HQ pitchers | Shirls(0.52), H9K(0.79), Dr. Seuss(0.94), Seibs(1.17), The Kid(1.22), CJ(1.28), Trans Am(1.32), Tugboat(1.35), Palpatine(1.66), DJ(1.76)
+  2010: 30 HQ pitchers | Box(0.78), CJ(0.96), Dr. Seuss(1.04), Doc(1.13), Palpatine(1.15), Beardface(1.27), Seibs(1.27), Trans Am(1.43), H9K(1.46), Web Gem(1.53)
+  2011: 24 HQ pitchers | Tugboat(0.72), Dr. Seuss(1.18), Rex(1.74), Beardface(1.75), Pork Buoy(1.8), H9K(1.9), Shirls(1.91), The Kid(1.93), CJ(1.96), Web Gem(2.05)
+  2012: 21 HQ pitchers | Beardface(1.01), Tugboat(1.3), Sticks(1.39), The Kid(1.65), Box(1.87), Shirls(1.88), TJ(1.89), Web Gem(1.95), Nightmare(1.97), Torpedo(1.97)
+  2013: 34 HQ pitchers | Monsoon(0.14), Dr. Seuss(0.5), H9K(0.64), Web Gem(0.79), Tugboat(0.81), Shirls(0.86), Hardball(0.91), Sticks(1.13), Edgar(1.24), Nightmare(1.26)
+  2014: 35 HQ pitchers | The Kid(0.49), Dr. Seuss(0.59), Rex(0.65), Handy Mat(0.81), Sticks(0.84), Hardball(0.87), Shirls(0.89), Web Gem(1.07), Boom(1.17), Nine(1.2)
+  2015: 27 HQ pitchers | Dr. Seuss(0.16), Palpatine(0.26), Sticks(0.28), Nightmare(0.92), Hardball(0.96), Beardface(1.04), JC(1.55), Old Yeller(1.69), Shirls(1.74), Santi(2.04)
+  2016: 25 HQ pitchers | Old Yeller(0.82), Dr. Seuss(0.9), Mippey5(1.02), Sticks(1.03), Nutshot(1.27), Web Gem(1.28), Nightmare(1.6), Huck Finn(1.66), Taco(1.79), Palpatine(1.82)
+  2017: 28 HQ pitchers | Dr. Seuss(0.26), Nightmare(0.57), Shandy(0.57), Boom(0.77), Epstein(0.9), Mippey5(1.09), Huck Finn(1.48), DJ(1.71), Thunderson(1.92), Old Yeller(1.95)
+  2018: 35 HQ pitchers | JC(0.79), Dr. Seuss(0.87), Nightmare(0.9), Spaz(1.03), Handy Mat(1.1), Boom(1.42), Taco(1.46), Hardball(1.47), Bliss Jr(1.7), Psych(1.7)
+  2019: 31 HQ pitchers | Dr. Seuss(0.64), Nightmare(0.93), Boom(1.19), Epstein(1.23), Handy Mat(1.28), Old Yeller(1.54), JC(1.68), Hardball(1.74), Taco(1.85), Bliss Jr(1.91)
+  2020: 22 HQ pitchers | Nightmare(0.71), Dr. Seuss(0.89), Griz(1.01), Nickname(1.2), The Man(1.25), Web Gem(1.52), Mippey5(1.56), Epstein(1.87), Lulu(1.89), Psych(1.98)
+  2021: 19 HQ pitchers | JC(1.16), Nightmare(1.33), Dr. Seuss(1.89), Thunderson(2.01), Paper Boy(2.07), Box(2.42), Groundskeeper Willie(2.42), Lulu(2.56), The Wish(2.61), Mippey5(2.76)
+  2022: 14 HQ pitchers | Dumpy(1.83), Dr. Seuss(2.22), Sanchez(2.25), Psych(2.33), Air Jordy(2.43), Knooty Booty(2.59), Nightmare(2.62), Epstein(2.69), Mippey5(2.8), Web Gem(3.0)
+  2023: 15 HQ pitchers | Psych(1.09), Dumpy(1.54), Mippey5(1.58), Epstein(1.66), Dr. Seuss(1.88), Handy Mat(2.17), Z-Dog(2.17), Cakes(2.33), Air Jordy(2.42), Nightmare(2.63)
+  2024: 22 HQ pitchers | Air Jordy(1.17), Stix(1.47), Mippey5(1.7), Psych(1.71), Nightmare(1.92), Handy Mat(2.2), DaVinci(2.22), Griz(2.28), Cakes(2.45), Stache(2.46)
+  2025: 18 HQ pitchers | Mippey5(1.6), DaVinci(1.75), Shipwreck(2.15), T Sea(2.15), Nightmare(2.18), Psych(2.52), Cakes(2.54), Air Jordy(2.57), CatNip(2.59), Pooh Bear(2.77)
+
+  Total hq_pitchers records: 543
+
+  HQ Batters (OBP > 0.35, qualified):
+  2004: 12 HQ batters | Nine(0.486), Chops(0.443), Edgar(0.431), Costa(0.415), J-Ski(0.399), Tom(0.395), Nelson(0.381), Jon(0.363)
+  2005: 24 HQ batters | J-Ski(0.494), Sanchez(0.485), Tugboat(0.475), Nine(0.468), Chops(0.449), Ace(0.426), Neush(0.426), Teen Wolf(0.401)
+  2006: 43 HQ batters | Spoon(0.539), Hobbs(0.519), Fedawg(0.491), J-Ski(0.485), Balls(0.48), Quick(0.464), Lil' Randall(0.444), Steve 1(0.438)
+  2007: 32 HQ batters | Chops(0.473), Panther(0.455), Hendi(0.446), Hobbs(0.436), Dutch(0.43), Edgar(0.426), Sanchez(0.425), Nine(0.423)
+  2008: 38 HQ batters | Chops(0.519), Monsoon(0.491), Spoon(0.449), J-Ski(0.447), Hobbs(0.445), Edgar(0.428), Bliss(0.423), Tugboat(0.423)
+  2009: 45 HQ batters | Chops(0.517), JC(0.502), Tugboat(0.463), Hobbs(0.458), Edgar(0.445), Nine(0.441), Sanchez(0.436), Two Bat(0.43)
+  2010: 39 HQ batters | Tugboat(0.529), JC(0.476), K-Mart(0.476), Pearl(0.476), Spaz(0.473), Focker(0.464), Shirls(0.432), 60 Hz(0.429)
+  2011: 65 HQ batters | Aquaman(0.502), Rex(0.492), TJ(0.483), Beardface(0.474), Cobra Kai(0.471), Torpedo(0.465), Chops(0.463), Flow(0.46)
+  2012: 60 HQ batters | Shirls(0.469), Vlade(0.467), Chops(0.466), Spaz(0.462), Hobbs(0.46), Tugboat(0.453), Sanchez(0.451), Focker(0.45)
+  2013: 60 HQ batters | Handy Mat(0.604), Two Bat(0.507), Bros(0.506), Smallpox(0.506), Tugboat(0.497), Fedawg(0.496), Chops(0.474), Mippey5(0.474)
+  2014: 58 HQ batters | Smallpox(0.579), Seabass(0.523), Fedawg(0.492), Chops(0.481), JC(0.475), Web Gem(0.47), Boom(0.468), Aquaman(0.46)
+  2015: 44 HQ batters | Hondo(0.505), Boom(0.494), Pearl(0.481), Smallpox(0.458), Chops(0.454), Fedawg(0.449), Al(0.446), Seabass(0.444)
+  2016: 45 HQ batters | Hondo(0.503), Pearl(0.497), Sanchez(0.486), TT(0.482), Smallpox(0.476), Beardface(0.462), Shirls(0.457), Chops(0.455)
+  2017: 32 HQ batters | Griz(0.498), Seabass(0.494), Chops(0.493), Mippey5(0.47), Smallpox(0.457), Sanchez(0.447), Rocky(0.441), EAD(0.44)
+  2018: 35 HQ batters | G String(0.536), Torpedo(0.536), EAD(0.492), Psych(0.474), Smallpox(0.466), Web Gem(0.464), JC(0.46), Schnoogens(0.45)
+  2019: 50 HQ batters | Dr. Seuss(0.524), Psych(0.511), Handy Mat(0.51), Mippey5(0.485), Griz(0.479), Box(0.476), Deuce(0.475), Pooh Bear(0.468)
+  2020: 34 HQ batters | Chops(0.513), Daubs(0.469), Smallpox(0.462), Dr. Seuss(0.458), Psych(0.454), Baby Face(0.445), Face(0.441), Griz(0.441)
+  2021: 66 HQ batters | Psych(0.533), Smallpox(0.52), Baby Face(0.513), Epstein(0.512), Chops(0.492), pNut(0.49), Dr. Seuss(0.487), Griz(0.482)
+  2022: 76 HQ batters | Scrabble(0.521), pNut(0.521), Dr. Seuss(0.515), Griz(0.505), Baby Face(0.497), Pooh Bear(0.495), Mehoff(0.488), Psych(0.488)
+  2023: 80 HQ batters | Taco(0.554), Baby Face(0.553), Chops(0.547), Mippey5(0.539), Face(0.525), The Wish(0.525), Griz(0.509), Dr. Seuss(0.507)
+  2024: 75 HQ batters | Chops(0.534), Face(0.506), Mippey5(0.498), Smallpox(0.498), Psych(0.496), TD(0.494), Thor(0.491), Knipples(0.487)
+  2025: 84 HQ batters | Griz(0.551), Smallpox(0.549), The Wish(0.525), Baby Face(0.52), Meow(0.509), Stix(0.509), Face(0.502), Web Gem(0.5)
+
+  Total hq_batters records: 1097
+
+=== STEP 6: Calculating HQ Batting Splits ===
+  HQ pitcher lookup entries: 543
+  BvP rows to process: 2203
+  Rows matched to HQ pitchers: 626, unmatched: 1577
+
+  OPS Sanity Check Warnings:
+  WARNING: Anakin 2025 HQ OPS (1.988) > overall OPS (1.635) by 0.353
+  WARNING: Epstein 2022 HQ OPS (1.587) > overall OPS (1.339) by 0.248
+
+  Records saved: 69
+  Qualified records (10+ PA): 69
+
+=== STEP 7: Calculating HQ Pitching Splits ===
+  HQ batter lookup entries: 1097
+  Total pitchers in BvP as opposing_pitcher: 287
+  Pitcher-season splits calculated: 2344
+
+  HQ pitching splits saved: 2334
+  Qualified (10+ PA): 2062
+
+  Vibes pitchers vs HQ batters:
+  Anakin:
+    2020: PA=11, H=4, HR=1, BB=0, SO=0, OBP-against=0.364, qualifies=1
+  CatNip:
+    2019: PA=79, H=16, HR=6, BB=14, SO=24, OBP-against=0.38, qualifies=1
+    2020: PA=15, H=4, HR=0, BB=2, SO=4, OBP-against=0.4, qualifies=1
+    2021: PA=20, H=4, HR=2, BB=6, SO=4, OBP-against=0.5, qualifies=1
+    2022: PA=64, H=13, HR=4, BB=6, SO=16, OBP-against=0.297, qualifies=1
+    2023: PA=22, H=4, HR=2, BB=1, SO=14, OBP-against=0.227, qualifies=1
+    2024: PA=11, H=2, HR=1, BB=2, SO=6, OBP-against=0.364, qualifies=1
+    2025: PA=37, H=3, HR=0, BB=6, SO=11, OBP-against=0.243, qualifies=1
+  Cheerio:
+    2018: PA=6, H=3, HR=0, BB=2, SO=0, OBP-against=0.833, qualifies=0
+    2019: PA=8, H=3, HR=3, BB=1, SO=0, OBP-against=0.5, qualifies=0
+    2020: PA=3, H=2, HR=0, BB=1, SO=0, OBP-against=1.0, qualifies=0
+    2022: PA=3, H=1, HR=1, BB=1, SO=0, OBP-against=0.667, qualifies=0
+    2023: PA=2, H=0, HR=0, BB=1, SO=0, OBP-against=0.5, qualifies=0
+  Epstein:
+    2016: PA=102, H=21, HR=8, BB=18, SO=23, OBP-against=0.382, qualifies=1
+    2017: PA=68, H=10, HR=2, BB=6, SO=28, OBP-against=0.239, qualifies=1
+    2018: PA=89, H=22, HR=9, BB=3, SO=25, OBP-against=0.281, qualifies=1
+    2019: PA=95, H=18, HR=6, BB=1, SO=33, OBP-against=0.2, qualifies=1
+    2020: PA=78, H=15, HR=4, BB=8, SO=22, OBP-against=0.295, qualifies=1
+    2021: PA=162, H=49, HR=8, BB=19, SO=46, OBP-against=0.422, qualifies=1
+    2022: PA=125, H=29, HR=5, BB=5, SO=45, OBP-against=0.272, qualifies=1
+    2023: PA=94, H=19, HR=2, BB=4, SO=37, OBP-against=0.245, qualifies=1
+    2024: PA=137, H=29, HR=9, BB=12, SO=41, OBP-against=0.299, qualifies=1
+    2025: PA=95, H=23, HR=7, BB=15, SO=27, OBP-against=0.4, qualifies=1
+  FishHook:
+    2019: PA=2, H=0, HR=0, BB=1, SO=0, OBP-against=0.5, qualifies=0
+    2020: PA=99, H=14, HR=7, BB=25, SO=18, OBP-against=0.394, qualifies=1
+    2021: PA=43, H=10, HR=3, BB=9, SO=2, OBP-against=0.442, qualifies=1
+    2022: PA=29, H=11, HR=3, BB=8, SO=1, OBP-against=0.655, qualifies=1
+    2023: PA=25, H=5, HR=1, BB=4, SO=4, OBP-against=0.36, qualifies=1
+    2024: PA=20, H=7, HR=1, BB=5, SO=2, OBP-against=0.6, qualifies=1
+    2025: PA=36, H=11, HR=3, BB=11, SO=3, OBP-against=0.611, qualifies=1
+  HuckFinn:
+    2013: PA=83, H=21, HR=5, BB=6, SO=26, OBP-against=0.325, qualifies=1
+    2014: PA=59, H=10, HR=2, BB=3, SO=14, OBP-against=0.22, qualifies=1
+    2015: PA=128, H=27, HR=10, BB=19, SO=35, OBP-against=0.359, qualifies=1
+    2016: PA=106, H=14, HR=4, BB=6, SO=36, OBP-against=0.189, qualifies=1
+    2017: PA=61, H=10, HR=2, BB=2, SO=23, OBP-against=0.197, qualifies=1
+    2018: PA=55, H=18, HR=5, BB=4, SO=17, OBP-against=0.4, qualifies=1
+    2019: PA=94, H=15, HR=7, BB=6, SO=39, OBP-against=0.223, qualifies=1
+    2020: PA=35, H=10, HR=2, BB=1, SO=11, OBP-against=0.314, qualifies=1
+    2021: PA=156, H=51, HR=14, BB=15, SO=32, OBP-against=0.429, qualifies=1
+    2022: PA=89, H=13, HR=2, BB=10, SO=19, OBP-against=0.258, qualifies=1
+    2023: PA=97, H=23, HR=7, BB=10, SO=31, OBP-against=0.34, qualifies=1
+    2024: PA=115, H=28, HR=13, BB=9, SO=23, OBP-against=0.325, qualifies=1
+    2025: PA=87, H=23, HR=7, BB=8, SO=28, OBP-against=0.356, qualifies=1
+  Jessie:
+    2025: PA=3, H=0, HR=0, BB=0, SO=0, OBP-against=0.0, qualifies=0
+  Kar:
+    2021: PA=9, H=5, HR=2, BB=1, SO=1, OBP-against=0.667, qualifies=0
+    2022: PA=7, H=2, HR=0, BB=0, SO=0, OBP-against=0.333, qualifies=0
+    2023: PA=5, H=2, HR=0, BB=0, SO=2, OBP-against=0.4, qualifies=0
+  Nightmare:
+    2007: PA=35, H=2, HR=0, BB=15, SO=11, OBP-against=0.486, qualifies=1
+    2008: PA=67, H=11, HR=4, BB=19, SO=14, OBP-against=0.448, qualifies=1
+    2009: PA=47, H=10, HR=2, BB=2, SO=21, OBP-against=0.255, qualifies=1
+    2010: PA=37, H=8, HR=2, BB=6, SO=11, OBP-against=0.378, qualifies=1
+    2011: PA=154, H=23, HR=6, BB=28, SO=43, OBP-against=0.333, qualifies=1
+    2012: PA=115, H=24, HR=2, BB=11, SO=41, OBP-against=0.304, qualifies=1
+    2013: PA=95, H=11, HR=2, BB=13, SO=32, OBP-against=0.253, qualifies=1
+    2014: PA=28, H=5, HR=2, BB=3, SO=13, OBP-against=0.286, qualifies=1
+    2015: PA=50, H=7, HR=1, BB=7, SO=11, OBP-against=0.28, qualifies=1
+    2016: PA=69, H=11, HR=3, BB=14, SO=24, OBP-against=0.362, qualifies=1
+    2017: PA=42, H=6, HR=1, BB=2, SO=17, OBP-against=0.19, qualifies=1
+    2018: PA=92, H=13, HR=1, BB=7, SO=33, OBP-against=0.217, qualifies=1
+    2019: PA=61, H=8, HR=1, BB=5, SO=26, OBP-against=0.213, qualifies=1
+    2020: PA=46, H=4, HR=0, BB=1, SO=25, OBP-against=0.109, qualifies=1
+    2021: PA=79, H=9, HR=0, BB=8, SO=33, OBP-against=0.215, qualifies=1
+    2022: PA=126, H=28, HR=6, BB=10, SO=39, OBP-against=0.302, qualifies=1
+    2023: PA=86, H=17, HR=3, BB=11, SO=29, OBP-against=0.326, qualifies=1
+    2024: PA=109, H=22, HR=2, BB=9, SO=30, OBP-against=0.284, qualifies=1
+    2025: PA=84, H=12, HR=3, BB=11, SO=31, OBP-against=0.274, qualifies=1
+  Fortnite:
+    2023: PA=3, H=0, HR=0, BB=2, SO=0, OBP-against=0.667, qualifies=0
+    2025: PA=2, H=1, HR=0, BB=1, SO=0, OBP-against=1.0, qualifies=0
+
+=== STEP 8: Calculating HQ Percentile Rankings ===
+
+  Batting vs HQ Pitcher percentiles:
+  2007: pool too thin (1) - skipping
+  2008: pool too thin (1) - skipping
+  2009: pool too thin (1) - skipping
+  2010: pool too thin (1) - skipping
+  2011: pool too thin (1) - skipping
+  2012: pool too thin (1) - skipping
+  2013: *** THIN POOL (2 players)
+  2014: *** THIN POOL (2 players)
+  2015: *** THIN POOL (2 players)
+  2016: *** THIN POOL (4 players)
+  2017: *** THIN POOL (4 players)
+  2018: *** THIN POOL (4 players)
+  2019: pool_size=6
+  2020: pool_size=7
+  2021: pool_size=6
+  2022: pool_size=6
+  2023: pool_size=6
+  2024: pool_size=7
+  2025: pool_size=7
+  Total batting HQ percentile records inserted: 619
+
+  Pitching vs HQ Hitter percentiles:
+  2004: pool_size=32
+  2005: pool_size=59
+  2006: pool_size=72
+  2007: pool_size=73
+  2008: pool_size=78
+  2009: pool_size=97
+  2010: pool_size=94
+  2011: pool_size=108
+  2012: pool_size=103
+  2013: pool_size=126
+  2014: pool_size=107
+  2015: pool_size=83
+  2016: pool_size=100
+  2017: pool_size=98
+  2018: pool_size=103
+  2019: pool_size=107
+  2020: pool_size=74
+  2021: pool_size=105
+  2022: pool_size=109
+  2023: pool_size=119
+  2024: pool_size=103
+  2025: pool_size=112
+  Total pitching HQ percentile records inserted: 11650
+
+=== VERIFICATION: Final DB State ===
+
+  Epstein 2025 HQ batting split:
+    PA=42, AB=35, H=5, HR=3, BB=7, SO=16
+    AVG=0.143, OBP=0.286, SLG=0.4, OPS=0.686
+    BB%=0.167, K%=0.381, ISO=0.257, BABIP=0.125
+    Qualifies: 1
+
+  CatNip 2025 HQ pitching split (vs HQ hitters):
+    PA=37, AB=31, H=3, HR=0, BB=6, SO=11
+    BAA=0.097, OBP-against=0.243, OPS-against=0.34
+    K%=1.222, BB%=0.667
+    Qualifies: 1
+
+  Total hq_opponent_splits records: 2403
+  Qualified batting (10+ PA): 69
+  Qualified pitching (10+ PA): 2062
+  HQ percentile records in percentile_rankings: 619
+
+  Epstein 2025 HQ percentiles:
+    hq_ab_hr: 11.7 -> 71th pct [Q] (pool=7)
+    hq_avg: 0.143 -> 1th pct [Q] (pool=7)
+    hq_babip: 0.125 -> 14th pct [Q] (pool=7)
+    hq_bb_k: 0.438 -> 43th pct [Q] (pool=7)
+    hq_bb_pct: 0.167 -> 71th pct [Q] (pool=7)
+    hq_iso: 0.257 -> 71th pct [Q] (pool=7)
+    hq_k_pct: 0.381 -> 1th pct [Q] (pool=7)
+    hq_obp: 0.286 -> 29th pct [Q] (pool=7)
+    hq_ops: 0.686 -> 29th pct [Q] (pool=7)
+    hq_slg: 0.4 -> 57th pct [Q] (pool=7)
+
+============================================================
+HQ PIPELINE COMPLETE: 2026-03-28 01:34:17
+============================================================
+
+============================================================
+HQ PIPELINE STARTED: 2026-03-28 01:34:43
+============================================================
+
+============================================================
+=== STEP 1 AUDIT RESULTS ===
+============================================================
+1. Total rows in batter_vs_pitcher: 71296
+2. Unique batters: 262
+3. Unique opposing pitchers: 497
+4. Sample 10 rows: [see query output above]
+5. Seasons covered:
+   2004: 433 records
+   2005: 1385 records
+   2006: 2011 records
+   2007: 2174 records
+   2008: 2160 records
+   2009: 2086 records
+   2010: 2422 records
+   2011: 2565 records
+   2012: 2560 records
+   2013: 2829 records
+   2014: 2237 records
+   2015: 1968 records
+   2016: 2280 records
+   2017: 2092 records
+   2018: 2222 records
+   2019: 2441 records
+   2020: 1244 records
+   2021: 2162 records
+   2022: 2428 records
+   2023: 2573 records
+   2024: 2525 records
+   2025: 2492 records
+   Career: 24007 records
+6. Vibes players with BvP data:
+   Anakin: 129 records (2020-Career)
+   CatNip: 273 records (2019-Career)
+   Cheerio: 470 records (2016-Career)
+   Epstein: 477 records (2016-Career)
+   FishHook: 329 records (2019-Career)
+   Fortnite: 14 records (2023-Career)
+   HuckFinn: 575 records (2013-Career)
+   Jessie: 2 records (2025-Career)
+   Kar: 5 records (2021-Career)
+   Nightmare: 915 records (2007-Career)
+7. PA check Epstein 2025: BvP=217, batting_stats=217 - MATCH
+8. Vibes players with 0 BvP records: Jessie (2 records only), Kar (5 records only), Fortnite (14 records only)
+9. Non-Vibes unique players in BvP: 252
+10. Diagnosis: BvP table uses hashtag format for Vibes players (FishHook, HuckFinn)
+    league_batting_stats uses display names (Fish Hook, Huck Finn)
+    league_pitching_stats uses display names for both
+    PA check passes perfectly (217 for Epstein 2025)
+
+============================================================
+=== STEP 2 AUDIT: ERA Matching ===
+============================================================
+  Direct name match: 1506 matched / 2446 total = 61.6%
+  Unmatched: 940
+  Root causes:
+  - Some pitchers appear in BvP but not in league_pitching_stats (occasional pitchers, position players)
+  - These pitchers without ERA data cannot be HQ pitchers by definition
+  PA Coverage: ~87.2% of plate appearances are vs pitchers with ERA data
+  VERDICT: 61.6% name match rate but 87.2% PA coverage - acceptable as non-matched = non-HQ
+
+============================================================
+=== STEP 3 AUDIT: OBP Matching ===
+============================================================
+  Direct name match: 1331 matched / 1694 total = 78.6%
+  Unmatched: 363
+  Key mismatches: FishHook vs 'Fish Hook', HuckFinn vs 'Huck Finn'
+  After hashtag normalization: ~85%+ match rate
+
+=== STEP 4: Building Name Normalization Mappings ===
+  name_mappings: 99 entries inserted
+
+  Name normalization test:
+    'Dr. Seuss' -> 'dr seuss'
+    'O'Bannion' -> 'obannion'
+    'T-Mac' -> 't mac'
+    'Fish Hook' -> 'fish hook'
+    'Huck Finn' -> 'huck finn'
+    'FishHook' -> 'fishhook'
+    'HuckFinn' -> 'huckfinn'
+    'Shirls Jr' -> 'shirls jr'
+    'B Squared' -> 'b squared'
+    'Knooty Booty' -> 'knooty booty'
+
+=== STEP 5: Building HQ Pitcher and Hitter Lists ===
+
+  HQ Pitchers (ERA < 3.5, qualified):
+  2004: 9 HQ pitchers | Truck(1.33), Shirls(1.99), Cota(2.22), J-Ski(2.3), Mathis(2.62), The Pirate(2.67), Sanchez(2.99), Rocket(3.08), CX(3.41)
+  2005: 21 HQ pitchers | Eck(0.35), Doc(1.27), The Man(1.34), CJ(1.38), Cota(1.56), J-Ski(1.6), Costa(1.68), AC(1.84), Shirls(2.04), Tugboat(2.09)
+  2006: 24 HQ pitchers | CJ(0.61), Doc(0.9), Seibs(1.15), T-Bag(1.39), Coop(1.4), Spoon(1.4), Shirls(1.41), Chops(1.72), Dr. Seuss(1.75), Torpedo(1.93)
+  2007: 28 HQ pitchers | Dr. Seuss(0.63), Doc(1.11), Spoon(1.39), Rondell(1.4), Palpatine(1.52), Seibs(1.54), Hartski(1.65), Shirls(1.74), Molgs(1.78), Tugboat(1.83)
+  2008: 25 HQ pitchers | Edgar(0.43), Doc(0.48), Dr. Seuss(0.7), Palpatine(1.22), H9K(1.29), Spoon(1.34), AC(1.46), CJ(1.56), T-Bag(1.6), Tugboat(1.94)
+  2009: 36 HQ pitchers | Shirls(0.52), H9K(0.79), Dr. Seuss(0.94), Seibs(1.17), The Kid(1.22), CJ(1.28), Trans Am(1.32), Tugboat(1.35), Palpatine(1.66), DJ(1.76)
+  2010: 30 HQ pitchers | Box(0.78), CJ(0.96), Dr. Seuss(1.04), Doc(1.13), Palpatine(1.15), Beardface(1.27), Seibs(1.27), Trans Am(1.43), H9K(1.46), Web Gem(1.53)
+  2011: 24 HQ pitchers | Tugboat(0.72), Dr. Seuss(1.18), Rex(1.74), Beardface(1.75), Pork Buoy(1.8), H9K(1.9), Shirls(1.91), The Kid(1.93), CJ(1.96), Web Gem(2.05)
+  2012: 21 HQ pitchers | Beardface(1.01), Tugboat(1.3), Sticks(1.39), The Kid(1.65), Box(1.87), Shirls(1.88), TJ(1.89), Web Gem(1.95), Nightmare(1.97), Torpedo(1.97)
+  2013: 34 HQ pitchers | Monsoon(0.14), Dr. Seuss(0.5), H9K(0.64), Web Gem(0.79), Tugboat(0.81), Shirls(0.86), Hardball(0.91), Sticks(1.13), Edgar(1.24), Nightmare(1.26)
+  2014: 35 HQ pitchers | The Kid(0.49), Dr. Seuss(0.59), Rex(0.65), Handy Mat(0.81), Sticks(0.84), Hardball(0.87), Shirls(0.89), Web Gem(1.07), Boom(1.17), Nine(1.2)
+  2015: 27 HQ pitchers | Dr. Seuss(0.16), Palpatine(0.26), Sticks(0.28), Nightmare(0.92), Hardball(0.96), Beardface(1.04), JC(1.55), Old Yeller(1.69), Shirls(1.74), Santi(2.04)
+  2016: 25 HQ pitchers | Old Yeller(0.82), Dr. Seuss(0.9), Mippey5(1.02), Sticks(1.03), Nutshot(1.27), Web Gem(1.28), Nightmare(1.6), Huck Finn(1.66), Taco(1.79), Palpatine(1.82)
+  2017: 28 HQ pitchers | Dr. Seuss(0.26), Nightmare(0.57), Shandy(0.57), Boom(0.77), Epstein(0.9), Mippey5(1.09), Huck Finn(1.48), DJ(1.71), Thunderson(1.92), Old Yeller(1.95)
+  2018: 35 HQ pitchers | JC(0.79), Dr. Seuss(0.87), Nightmare(0.9), Spaz(1.03), Handy Mat(1.1), Boom(1.42), Taco(1.46), Hardball(1.47), Bliss Jr(1.7), Psych(1.7)
+  2019: 31 HQ pitchers | Dr. Seuss(0.64), Nightmare(0.93), Boom(1.19), Epstein(1.23), Handy Mat(1.28), Old Yeller(1.54), JC(1.68), Hardball(1.74), Taco(1.85), Bliss Jr(1.91)
+  2020: 22 HQ pitchers | Nightmare(0.71), Dr. Seuss(0.89), Griz(1.01), Nickname(1.2), The Man(1.25), Web Gem(1.52), Mippey5(1.56), Epstein(1.87), Lulu(1.89), Psych(1.98)
+  2021: 19 HQ pitchers | JC(1.16), Nightmare(1.33), Dr. Seuss(1.89), Thunderson(2.01), Paper Boy(2.07), Box(2.42), Groundskeeper Willie(2.42), Lulu(2.56), The Wish(2.61), Mippey5(2.76)
+  2022: 14 HQ pitchers | Dumpy(1.83), Dr. Seuss(2.22), Sanchez(2.25), Psych(2.33), Air Jordy(2.43), Knooty Booty(2.59), Nightmare(2.62), Epstein(2.69), Mippey5(2.8), Web Gem(3.0)
+  2023: 15 HQ pitchers | Psych(1.09), Dumpy(1.54), Mippey5(1.58), Epstein(1.66), Dr. Seuss(1.88), Handy Mat(2.17), Z-Dog(2.17), Cakes(2.33), Air Jordy(2.42), Nightmare(2.63)
+  2024: 22 HQ pitchers | Air Jordy(1.17), Stix(1.47), Mippey5(1.7), Psych(1.71), Nightmare(1.92), Handy Mat(2.2), DaVinci(2.22), Griz(2.28), Cakes(2.45), Stache(2.46)
+  2025: 18 HQ pitchers | Mippey5(1.6), DaVinci(1.75), Shipwreck(2.15), T Sea(2.15), Nightmare(2.18), Psych(2.52), Cakes(2.54), Air Jordy(2.57), CatNip(2.59), Pooh Bear(2.77)
+
+  Total hq_pitchers records: 543
+
+  HQ Batters (OBP > 0.35, qualified):
+  2004: 12 HQ batters | Nine(0.486), Chops(0.443), Edgar(0.431), Costa(0.415), J-Ski(0.399), Tom(0.395), Nelson(0.381), Jon(0.363)
+  2005: 24 HQ batters | J-Ski(0.494), Sanchez(0.485), Tugboat(0.475), Nine(0.468), Chops(0.449), Ace(0.426), Neush(0.426), Teen Wolf(0.401)
+  2006: 43 HQ batters | Spoon(0.539), Hobbs(0.519), Fedawg(0.491), J-Ski(0.485), Balls(0.48), Quick(0.464), Lil' Randall(0.444), Steve 1(0.438)
+  2007: 32 HQ batters | Chops(0.473), Panther(0.455), Hendi(0.446), Hobbs(0.436), Dutch(0.43), Edgar(0.426), Sanchez(0.425), Nine(0.423)
+  2008: 38 HQ batters | Chops(0.519), Monsoon(0.491), Spoon(0.449), J-Ski(0.447), Hobbs(0.445), Edgar(0.428), Bliss(0.423), Tugboat(0.423)
+  2009: 45 HQ batters | Chops(0.517), JC(0.502), Tugboat(0.463), Hobbs(0.458), Edgar(0.445), Nine(0.441), Sanchez(0.436), Two Bat(0.43)
+  2010: 39 HQ batters | Tugboat(0.529), JC(0.476), K-Mart(0.476), Pearl(0.476), Spaz(0.473), Focker(0.464), Shirls(0.432), 60 Hz(0.429)
+  2011: 65 HQ batters | Aquaman(0.502), Rex(0.492), TJ(0.483), Beardface(0.474), Cobra Kai(0.471), Torpedo(0.465), Chops(0.463), Flow(0.46)
+  2012: 60 HQ batters | Shirls(0.469), Vlade(0.467), Chops(0.466), Spaz(0.462), Hobbs(0.46), Tugboat(0.453), Sanchez(0.451), Focker(0.45)
+  2013: 60 HQ batters | Handy Mat(0.604), Two Bat(0.507), Bros(0.506), Smallpox(0.506), Tugboat(0.497), Fedawg(0.496), Chops(0.474), Mippey5(0.474)
+  2014: 58 HQ batters | Smallpox(0.579), Seabass(0.523), Fedawg(0.492), Chops(0.481), JC(0.475), Web Gem(0.47), Boom(0.468), Aquaman(0.46)
+  2015: 44 HQ batters | Hondo(0.505), Boom(0.494), Pearl(0.481), Smallpox(0.458), Chops(0.454), Fedawg(0.449), Al(0.446), Seabass(0.444)
+  2016: 45 HQ batters | Hondo(0.503), Pearl(0.497), Sanchez(0.486), TT(0.482), Smallpox(0.476), Beardface(0.462), Shirls(0.457), Chops(0.455)
+  2017: 32 HQ batters | Griz(0.498), Seabass(0.494), Chops(0.493), Mippey5(0.47), Smallpox(0.457), Sanchez(0.447), Rocky(0.441), EAD(0.44)
+  2018: 35 HQ batters | G String(0.536), Torpedo(0.536), EAD(0.492), Psych(0.474), Smallpox(0.466), Web Gem(0.464), JC(0.46), Schnoogens(0.45)
+  2019: 50 HQ batters | Dr. Seuss(0.524), Psych(0.511), Handy Mat(0.51), Mippey5(0.485), Griz(0.479), Box(0.476), Deuce(0.475), Pooh Bear(0.468)
+  2020: 34 HQ batters | Chops(0.513), Daubs(0.469), Smallpox(0.462), Dr. Seuss(0.458), Psych(0.454), Baby Face(0.445), Face(0.441), Griz(0.441)
+  2021: 66 HQ batters | Psych(0.533), Smallpox(0.52), Baby Face(0.513), Epstein(0.512), Chops(0.492), pNut(0.49), Dr. Seuss(0.487), Griz(0.482)
+  2022: 76 HQ batters | Scrabble(0.521), pNut(0.521), Dr. Seuss(0.515), Griz(0.505), Baby Face(0.497), Pooh Bear(0.495), Mehoff(0.488), Psych(0.488)
+  2023: 80 HQ batters | Taco(0.554), Baby Face(0.553), Chops(0.547), Mippey5(0.539), Face(0.525), The Wish(0.525), Griz(0.509), Dr. Seuss(0.507)
+  2024: 75 HQ batters | Chops(0.534), Face(0.506), Mippey5(0.498), Smallpox(0.498), Psych(0.496), TD(0.494), Thor(0.491), Knipples(0.487)
+  2025: 84 HQ batters | Griz(0.551), Smallpox(0.549), The Wish(0.525), Baby Face(0.52), Meow(0.509), Stix(0.509), Face(0.502), Web Gem(0.5)
+
+  Total hq_batters records: 1097
+
+=== STEP 6: Calculating HQ Batting Splits ===
+  HQ pitcher lookup entries: 543
+  BvP rows to process: 2203
+  Rows matched to HQ pitchers: 626, unmatched: 1577
+
+  OPS Sanity Check Warnings:
+  WARNING: Anakin 2025 HQ OPS (1.988) > overall OPS (1.635) by 0.353
+  WARNING: Epstein 2022 HQ OPS (1.587) > overall OPS (1.339) by 0.248
+
+  Records saved: 69
+  Qualified records (10+ PA): 69
+
+=== STEP 7: Calculating HQ Pitching Splits ===
+  HQ batter lookup entries: 1097
+  Total pitchers in BvP as opposing_pitcher: 287
+  Pitcher-season splits calculated: 2344
+
+  HQ pitching splits saved: 2334
+  Qualified (10+ PA): 2062
+
+  Vibes pitchers vs HQ batters:
+  Anakin:
+    2020: PA=11, H=4, HR=1, BB=0, SO=0, OBP-against=0.364, qualifies=1
+  CatNip:
+    2019: PA=79, H=16, HR=6, BB=14, SO=24, OBP-against=0.38, qualifies=1
+    2020: PA=15, H=4, HR=0, BB=2, SO=4, OBP-against=0.4, qualifies=1
+    2021: PA=20, H=4, HR=2, BB=6, SO=4, OBP-against=0.5, qualifies=1
+    2022: PA=64, H=13, HR=4, BB=6, SO=16, OBP-against=0.297, qualifies=1
+    2023: PA=22, H=4, HR=2, BB=1, SO=14, OBP-against=0.227, qualifies=1
+    2024: PA=11, H=2, HR=1, BB=2, SO=6, OBP-against=0.364, qualifies=1
+    2025: PA=37, H=3, HR=0, BB=6, SO=11, OBP-against=0.243, qualifies=1
+  Cheerio:
+    2018: PA=6, H=3, HR=0, BB=2, SO=0, OBP-against=0.833, qualifies=0
+    2019: PA=8, H=3, HR=3, BB=1, SO=0, OBP-against=0.5, qualifies=0
+    2020: PA=3, H=2, HR=0, BB=1, SO=0, OBP-against=1.0, qualifies=0
+    2022: PA=3, H=1, HR=1, BB=1, SO=0, OBP-against=0.667, qualifies=0
+    2023: PA=2, H=0, HR=0, BB=1, SO=0, OBP-against=0.5, qualifies=0
+  Epstein:
+    2016: PA=102, H=21, HR=8, BB=18, SO=23, OBP-against=0.382, qualifies=1
+    2017: PA=68, H=10, HR=2, BB=6, SO=28, OBP-against=0.239, qualifies=1
+    2018: PA=89, H=22, HR=9, BB=3, SO=25, OBP-against=0.281, qualifies=1
+    2019: PA=95, H=18, HR=6, BB=1, SO=33, OBP-against=0.2, qualifies=1
+    2020: PA=78, H=15, HR=4, BB=8, SO=22, OBP-against=0.295, qualifies=1
+    2021: PA=162, H=49, HR=8, BB=19, SO=46, OBP-against=0.422, qualifies=1
+    2022: PA=125, H=29, HR=5, BB=5, SO=45, OBP-against=0.272, qualifies=1
+    2023: PA=94, H=19, HR=2, BB=4, SO=37, OBP-against=0.245, qualifies=1
+    2024: PA=137, H=29, HR=9, BB=12, SO=41, OBP-against=0.299, qualifies=1
+    2025: PA=95, H=23, HR=7, BB=15, SO=27, OBP-against=0.4, qualifies=1
+  FishHook:
+    2019: PA=2, H=0, HR=0, BB=1, SO=0, OBP-against=0.5, qualifies=0
+    2020: PA=99, H=14, HR=7, BB=25, SO=18, OBP-against=0.394, qualifies=1
+    2021: PA=43, H=10, HR=3, BB=9, SO=2, OBP-against=0.442, qualifies=1
+    2022: PA=29, H=11, HR=3, BB=8, SO=1, OBP-against=0.655, qualifies=1
+    2023: PA=25, H=5, HR=1, BB=4, SO=4, OBP-against=0.36, qualifies=1
+    2024: PA=20, H=7, HR=1, BB=5, SO=2, OBP-against=0.6, qualifies=1
+    2025: PA=36, H=11, HR=3, BB=11, SO=3, OBP-against=0.611, qualifies=1
+  HuckFinn:
+    2013: PA=83, H=21, HR=5, BB=6, SO=26, OBP-against=0.325, qualifies=1
+    2014: PA=59, H=10, HR=2, BB=3, SO=14, OBP-against=0.22, qualifies=1
+    2015: PA=128, H=27, HR=10, BB=19, SO=35, OBP-against=0.359, qualifies=1
+    2016: PA=106, H=14, HR=4, BB=6, SO=36, OBP-against=0.189, qualifies=1
+    2017: PA=61, H=10, HR=2, BB=2, SO=23, OBP-against=0.197, qualifies=1
+    2018: PA=55, H=18, HR=5, BB=4, SO=17, OBP-against=0.4, qualifies=1
+    2019: PA=94, H=15, HR=7, BB=6, SO=39, OBP-against=0.223, qualifies=1
+    2020: PA=35, H=10, HR=2, BB=1, SO=11, OBP-against=0.314, qualifies=1
+    2021: PA=156, H=51, HR=14, BB=15, SO=32, OBP-against=0.429, qualifies=1
+    2022: PA=89, H=13, HR=2, BB=10, SO=19, OBP-against=0.258, qualifies=1
+    2023: PA=97, H=23, HR=7, BB=10, SO=31, OBP-against=0.34, qualifies=1
+    2024: PA=115, H=28, HR=13, BB=9, SO=23, OBP-against=0.325, qualifies=1
+    2025: PA=87, H=23, HR=7, BB=8, SO=28, OBP-against=0.356, qualifies=1
+  Jessie:
+    2025: PA=3, H=0, HR=0, BB=0, SO=0, OBP-against=0.0, qualifies=0
+  Kar:
+    2021: PA=9, H=5, HR=2, BB=1, SO=1, OBP-against=0.667, qualifies=0
+    2022: PA=7, H=2, HR=0, BB=0, SO=0, OBP-against=0.333, qualifies=0
+    2023: PA=5, H=2, HR=0, BB=0, SO=2, OBP-against=0.4, qualifies=0
+  Nightmare:
+    2007: PA=35, H=2, HR=0, BB=15, SO=11, OBP-against=0.486, qualifies=1
+    2008: PA=67, H=11, HR=4, BB=19, SO=14, OBP-against=0.448, qualifies=1
+    2009: PA=47, H=10, HR=2, BB=2, SO=21, OBP-against=0.255, qualifies=1
+    2010: PA=37, H=8, HR=2, BB=6, SO=11, OBP-against=0.378, qualifies=1
+    2011: PA=154, H=23, HR=6, BB=28, SO=43, OBP-against=0.333, qualifies=1
+    2012: PA=115, H=24, HR=2, BB=11, SO=41, OBP-against=0.304, qualifies=1
+    2013: PA=95, H=11, HR=2, BB=13, SO=32, OBP-against=0.253, qualifies=1
+    2014: PA=28, H=5, HR=2, BB=3, SO=13, OBP-against=0.286, qualifies=1
+    2015: PA=50, H=7, HR=1, BB=7, SO=11, OBP-against=0.28, qualifies=1
+    2016: PA=69, H=11, HR=3, BB=14, SO=24, OBP-against=0.362, qualifies=1
+    2017: PA=42, H=6, HR=1, BB=2, SO=17, OBP-against=0.19, qualifies=1
+    2018: PA=92, H=13, HR=1, BB=7, SO=33, OBP-against=0.217, qualifies=1
+    2019: PA=61, H=8, HR=1, BB=5, SO=26, OBP-against=0.213, qualifies=1
+    2020: PA=46, H=4, HR=0, BB=1, SO=25, OBP-against=0.109, qualifies=1
+    2021: PA=79, H=9, HR=0, BB=8, SO=33, OBP-against=0.215, qualifies=1
+    2022: PA=126, H=28, HR=6, BB=10, SO=39, OBP-against=0.302, qualifies=1
+    2023: PA=86, H=17, HR=3, BB=11, SO=29, OBP-against=0.326, qualifies=1
+    2024: PA=109, H=22, HR=2, BB=9, SO=30, OBP-against=0.284, qualifies=1
+    2025: PA=84, H=12, HR=3, BB=11, SO=31, OBP-against=0.274, qualifies=1
+  Fortnite:
+    2023: PA=3, H=0, HR=0, BB=2, SO=0, OBP-against=0.667, qualifies=0
+    2025: PA=2, H=1, HR=0, BB=1, SO=0, OBP-against=1.0, qualifies=0
+
+=== STEP 8: Calculating HQ Percentile Rankings ===
+
+  Batting vs HQ Pitcher percentiles:
+  2007: pool too thin (1) - skipping
+  2008: pool too thin (1) - skipping
+  2009: pool too thin (1) - skipping
+  2010: pool too thin (1) - skipping
+  2011: pool too thin (1) - skipping
+  2012: pool too thin (1) - skipping
+  2013: *** THIN POOL (2 players)
+  2014: *** THIN POOL (2 players)
+  2015: *** THIN POOL (2 players)
+  2016: *** THIN POOL (4 players)
+  2017: *** THIN POOL (4 players)
+  2018: *** THIN POOL (4 players)
+  2019: pool_size=6
+  2020: pool_size=7
+  2021: pool_size=6
+  2022: pool_size=6
+  2023: pool_size=6
+  2024: pool_size=7
+  2025: pool_size=7
+  Total batting HQ percentile records inserted: 619
+
+  Pitching vs HQ Hitter percentiles:
+  2004: pool_size=32
+  2005: pool_size=59
+  2006: pool_size=72
+  2007: pool_size=73
+  2008: pool_size=78
+  2009: pool_size=97
+  2010: pool_size=94
+  2011: pool_size=108
+  2012: pool_size=103
+  2013: pool_size=126
+  2014: pool_size=107
+  2015: pool_size=83
+  2016: pool_size=100
+  2017: pool_size=98
+  2018: pool_size=103
+  2019: pool_size=107
+  2020: pool_size=74
+  2021: pool_size=105
+  2022: pool_size=109
+  2023: pool_size=119
+  2024: pool_size=103
+  2025: pool_size=112
+  Total pitching HQ percentile records inserted: 11650
+
+=== VERIFICATION: Final DB State ===
+
+  Epstein 2025 HQ batting split:
+    PA=42, AB=35, H=5, HR=3, BB=7, SO=16
+    AVG=0.143, OBP=0.286, SLG=0.4, OPS=0.686
+    BB%=0.167, K%=0.381, ISO=0.257, BABIP=0.125
+    Qualifies: 1
+
+  CatNip 2025 HQ pitching split (vs HQ hitters):
+    PA=37, AB=31, H=3, HR=0, BB=6, SO=11
+    BAA=0.097, OBP-against=0.243, OPS-against=0.34
+    K%=0.297, BB%=0.162
+    Qualifies: 1
+
+  Total hq_opponent_splits records: 2403
+  Qualified batting (10+ PA): 69
+  Qualified pitching (10+ PA): 2062
+  HQ percentile records in percentile_rankings: 619
+
+  Epstein 2025 HQ percentiles:
+    hq_ab_hr: 11.7 -> 71th pct [Q] (pool=7)
+    hq_avg: 0.143 -> 1th pct [Q] (pool=7)
+    hq_babip: 0.125 -> 14th pct [Q] (pool=7)
+    hq_bb_k: 0.438 -> 43th pct [Q] (pool=7)
+    hq_bb_pct: 0.167 -> 71th pct [Q] (pool=7)
+    hq_iso: 0.257 -> 71th pct [Q] (pool=7)
+    hq_k_pct: 0.381 -> 1th pct [Q] (pool=7)
+    hq_obp: 0.286 -> 29th pct [Q] (pool=7)
+    hq_ops: 0.686 -> 29th pct [Q] (pool=7)
+    hq_slg: 0.4 -> 57th pct [Q] (pool=7)
+
+============================================================
+HQ PIPELINE COMPLETE: 2026-03-28 01:34:43
+============================================================
+
+============================================================
+=== STEP 10: FINAL VERIFICATION ===
+============================================================
+
+--- Epstein 2025 HQ batting split ---
+PA=42, AB=35, H=5, HR=3, BB=7, SO=16
+AVG=0.143, OBP=0.286, SLG=0.4, OPS=0.686
+BB%=0.167, K%=0.381, ISO=0.257, BABIP=0.125, Qualifies=1
+
+--- CatNip 2025 HQ pitching split ---
+PA=37, AB=31, H=3, HR=0, BB=6, SO=11
+BAA=0.097, OBP-against=0.243, OPS-against=0.34
+K%=0.297, BB%=0.162, BABIP=0.150, Qualifies=1
+
+============================================================
+=== COMPLETE SUMMARY ===
+============================================================
+
+STEPS COMPLETED:
+1. Database backup created: vibes_savant_backup_20260328_0122.db
+2. Step 1 Audit: 71,296 total BvP rows, 10 Vibes batters, 287 pitchers
+3. Step 2 Audit: 61.6% pitcher name match but 87.2% PA coverage (acceptable)
+4. Step 3 Audit: 78.6% batter name match (key issue: FishHook/HuckFinn hashtag vs display names)
+5. Step 4: name_mappings table created with 99 entries, normalization function built
+6. Step 5: hq_pitchers (543 records, 2004-2025), hq_batters (1097 records, 2004-2025)
+   HQ Pitcher threshold: ERA < 3.50, season qualifier
+   HQ Batter threshold: OBP > .350, season PA qualifier
+7. Step 6: hq_opponent_splits batting rebuilt - 69 records (all qualified 10+ PA)
+   Pool size: 7 Vibes batters (max, since BvP only has Vibes as batters)
+8. Step 7: hq_opponent_splits pitching rebuilt - 2334 records, 2062 qualified
+   Pool sizes: 74-126 per season (LARGE pool - all league pitchers in BvP)
+9. Step 8: percentile_rankings updated
+   - splits type (batting HQ): 619 records, hq_ops, hq_obp, hq_avg, hq_slg, hq_bb_pct, hq_k_pct, hq_bb_k, hq_iso, hq_babip, hq_ab_hr
+   - hq_pitcher type (pitching HQ): 11,650 records, hqpit_baa, hqpit_whip, hqpit_pit_k_pct, hqpit_pit_bb_pct, hqpit_pit_babip
+10. Step 9: Flask app bug fixed (opponent_tier_splits missing g, r columns)
+    All API endpoints verified working
+
+KEY FINDINGS:
+- CatNip 2025 pitching vs HQ batters: BAA=0.097, K%=0.297 -> 98th pct BAA, 86th pct K%, 98th pct WHIP
+- Nightmare 2025 pitching vs HQ batters: BAA=0.164, K%=0.369 -> 94th pct BAA, 94th pct K%, 91st pct WHIP
+- Epstein 2025 batting vs HQ pitchers: OPS=0.686 -> 29th percentile (pool=7)
+- Anakin 2025 batting vs HQ pitchers: OPS=1.988 -> 86th percentile (highest in Vibes)
+
+
+============================================================
+DEPLOYMENT CONFIRMED LIVE
+============================================================
+Render deploy ID: dep-d73ne5h4tr6s73cbri5g
+Status: live
+Tested URLs:
+  https://vibes-savant.onrender.com/player/Epstein -> 200 OK
+  https://vibes-savant.onrender.com/player/CatNip -> 200 OK
+  https://vibes-savant.onrender.com/api/player/Epstein/percentiles?season=2025 -> 10 HQ batting + 5 HQ pitching records
+
+HQ OPPONENT PERCENTILES DEPLOYMENT COMPLETE - live at vibes-savant.onrender.com

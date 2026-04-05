@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}HRL Standings — Vibes Front Office Tool{% endblock %}
+{% block content %}
+
+<!-- Page Header -->
+<section style="background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%);border-bottom:1px solid var(--border);padding:28px 0 20px;">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h1 style="font-family:var(--font-display);font-size:3rem;color:var(--text);margin:0 0 2px;letter-spacing:2px;">HRL STANDINGS</h1>
+        <p style="color:var(--muted);font-size:0.85rem;margin:0;">HRL Twin Cities Wiffleball · Historical Standings 2004–2025</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <label style="font-family:var(--font-heading);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);">Season</label>
+        <select id="season-select" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-family:var(--mono);font-size:0.9rem;background:var(--surface);color:var(--text);cursor:pointer;" onchange="loadStandings(this.value)">
+          {% for yr in available_seasons %}
+          <option value="{{ yr }}" {% if yr == current_season %}selected{% endif %}>{{ yr }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- World Series Banner (populated by JS) -->
+<div id="ws-banner" style="display:none;background:linear-gradient(90deg,#fef3c7 0%,#fffbeb 50%,#f9fafb 100%);border-bottom:1px solid #fbbf24;padding:14px 0;">
+  <div class="container" id="ws-banner-inner"></div>
+</div>
+
+<!-- Standings Content (populated by JS) -->
+<section class="section" style="padding-top:20px;">
+  <div class="container">
+    <div id="standings-loading" style="text-align:center;padding:40px;color:var(--muted);font-family:var(--font-heading);">Loading standings…</div>
+    <div id="standings-content" style="display:none;"></div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const CURRENT_SEASON = {{ current_season }};
+
+function loadStandings(season) {
+  document.getElementById('standings-loading').style.display = 'block';
+  document.getElementById('standings-content').style.display = 'none';
+  document.getElementById('ws-banner').style.display = 'none';
+
+  fetch('/api/standings/' + season)
+    .then(r => r.json())
+    .then(data => {
+      renderStandings(data, parseInt(season));
+      document.getElementById('standings-loading').style.display = 'none';
+      document.getElementById('standings-content').style.display = '';
+      history.pushState(null, '', '/teams?season=' + season);
+    })
+    .catch(e => {
+      document.getElementById('standings-loading').textContent = 'Error loading standings. Please try again.';
+    });
+}
+
+function renderStandings(data, season) {
+  // World Series banner
+  const ws = data.world_series || {};
+  if (ws.champion_team || ws.runner_up_team) {
+    const banner = document.getElementById('ws-banner-inner');
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+        ${ws.champion_team ? `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.6rem;">🏆</span>
+          <div>
+            <div style="font-family:var(--font-display);font-size:1.4rem;letter-spacing:1px;color:#92400e;">${ws.champion_team}</div>
+            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:#b45309;font-family:var(--font-heading);font-weight:700;">${season} World Series Champion</div>
+          </div>
+        </div>` : ''}
+        ${(ws.champion_team && ws.runner_up_team) ? '<div style="color:#9ca3af;font-size:1.2rem;">·</div>' : ''}
+        ${ws.runner_up_team ? `
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:1.3rem;">🥈</span>
+          <div>
+            <div style="font-family:var(--font-heading);font-size:1.1rem;font-weight:700;color:#6b7280;">${ws.runner_up_team}</div>
+            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:#9ca3af;font-family:var(--font-heading);font-weight:600;">${season} World Series Runner-Up</div>
+          </div>
+        </div>` : ''}
+      </div>`;
+    document.getElementById('ws-banner').style.display = 'block';
+  }
+
+  const content = document.getElementById('standings-content');
+  const cities = data.cities || {};
+  const cityNames = Object.keys(cities);
+
+  // Check if we have Eagan/Hopkins split or HRL-only
+  const hasEagan = 'Eagan' in cities;
+  const hasHopkins = 'Hopkins' in cities;
+  const hasHRL = 'HRL' in cities;
+
+  let html = '';
+
+  if (hasEagan || hasHopkins) {
+    // Two-column layout
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">';
+
+    for (const city of ['Eagan', 'Hopkins']) {
+      const cityData = cities[city];
+      if (!cityData) continue;
+
+      const cityColor = city === 'Eagan' ? 'var(--pink)' : 'var(--blue)';
+      html += `<div>
+        <h2 style="font-family:var(--font-heading);font-size:1.3rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:${cityColor};border-bottom:2px solid ${cityColor};padding-bottom:6px;margin-bottom:16px;">${city}</h2>`;
+
+      for (const [divName, teams] of Object.entries(cityData)) {
+        html += buildDivisionBlock(divName, teams, ws, season);
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  } else {
+    // Single-column layout for HRL or mixed
+    const allCities = Object.keys(cities);
+    for (const city of allCities) {
+      const cityData = cities[city];
+      if (!cityData) continue;
+
+      html += `<div style="margin-bottom:32px;">`;
+      if (city !== 'HRL') {
+        const cityColor = city === 'Eagan' ? 'var(--pink)' : 'var(--blue)';
+        html += `<h2 style="font-family:var(--font-heading);font-size:1.3rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:${cityColor};border-bottom:2px solid ${cityColor};padding-bottom:6px;margin-bottom:16px;">${city}</h2>`;
+      }
+      for (const [divName, teams] of Object.entries(cityData)) {
+        html += buildDivisionBlock(divName, teams, ws, season);
+      }
+      html += '</div>';
+    }
+  }
+
+  // If nothing rendered
+  if (!html) {
+    html = '<div style="text-align:center;padding:40px;color:var(--muted);">No standings data available for this season.</div>';
+  }
+
+  content.innerHTML = html;
+}
+
+function buildDivisionBlock(divName, teams, ws, season) {
+  const showDivLabel = divName && divName !== 'Main';
+  let html = `<div style="margin-bottom:20px;">`;
+  if (showDivLabel) {
+    html += `<div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);font-family:var(--font-heading);font-weight:700;margin-bottom:6px;">${divName}</div>`;
+  }
+  html += `<div class="table-wrap">
+    <table class="stats-table" style="font-size:0.82rem;">
+      <thead>
+        <tr>
+          <th style="text-align:left;min-width:120px;">Team</th>
+          <th class="num">W</th>
+          <th class="num">L</th>
+          <th class="num">PCT</th>
+          <th class="num">GB</th>
+          <th class="num" style="color:#16a34a;">RS</th>
+          <th class="num" style="color:#dc2626;">RA</th>
+          <th class="num">DIFF</th>
+          <th class="num">OPS</th>
+          <th class="num">ERA</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  teams.forEach((t, i) => {
+    const isChamp = t.playoff_result === 'World Series Champion';
+    const isRU = t.playoff_result === 'World Series Runner-Up';
+
+    let rowStyle = '';
+    if (isChamp) rowStyle = 'background:rgba(250,220,80,0.12);';
+    else if (isRU) rowStyle = 'background:rgba(200,200,200,0.12);';
+
+    const borderStyle = (i === 0) ? 'border-left:3px solid #d1d5db;' : '';
+    const champBorder = isChamp ? 'border-left:3px solid #f59e0b!important;' : '';
+    const finalBorder = isChamp ? champBorder : borderStyle;
+
+    const diff = t.run_differential;
+    const diffColor = (diff > 0) ? '#16a34a' : (diff < 0) ? '#dc2626' : 'inherit';
+    const diffSign = (diff > 0) ? '+' : '';
+
+    const slugUrl = t.team_slug || encodeURIComponent(t.team_name);
+    const teamUrl = `/team/${slugUrl}/${season}`;
+
+    const gbVal = (t.games_back == null) ? (i === 0 ? '—' : '—') : t.games_back.toFixed(1);
+    const pctVal = (t.pct != null) ? t.pct.toFixed(3) : '—';
+    const rsVal = t.runs_scored ?? '—';
+    const raVal = t.runs_allowed ?? '—';
+    const diffVal = diff != null ? diffSign + diff : '—';
+    const opsVal = t.team_ops != null ? t.team_ops.toFixed(3) : '—';
+    const eraVal = t.team_era != null ? t.team_era.toFixed(2) : '—';
+
+    html += `<tr style="${rowStyle}${finalBorder}">
+      <td style="text-align:left;">
+        <a href="${teamUrl}" style="display:flex;align-items:center;gap:6px;text-decoration:none;color:inherit;">
+          ${t.team_logo_url ? `<img src="${t.team_logo_url}" style="width:18px;height:18px;object-fit:contain;" onerror="this.style.display='none'">` : ''}
+          <span style="font-family:var(--font-heading);font-weight:700;">${t.team_name}</span>
+          ${isChamp ? ' <span style="font-size:0.85rem;">🏆</span>' : ''}
+          ${isRU ? ' <span style="font-size:0.85rem;">🥈</span>' : ''}
+        </a>
+      </td>
+      <td class="num">${t.wins ?? '—'}</td>
+      <td class="num">${t.losses ?? '—'}</td>
+      <td class="num">${pctVal}</td>
+      <td class="num">${gbVal}</td>
+      <td class="num">${rsVal}</td>
+      <td class="num">${raVal}</td>
+      <td class="num" style="color:${diffColor};font-weight:600;">${diffVal}</td>
+      <td class="num">${opsVal}</td>
+      <td class="num">${eraVal}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div></div>`;
+  return html;
+}
+
+// Load initial season
+loadStandings(CURRENT_SEASON);
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <clipPath id="circle-clip">
+      <circle cx="100" cy="100" r="100"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#circle-clip)">
+    <rect width="200" height="200" fill="#ea580c"/>
+    <line x1="-100" y1="0" x2="100" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="-60" y1="0" x2="140" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="-20" y1="0" x2="180" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="20" y1="0" x2="220" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="60" y1="0" x2="260" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="100" y1="0" x2="300" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="140" y1="0" x2="340" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="180" y1="0" x2="380" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="220" y1="0" x2="420" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <line x1="260" y1="0" x2="460" y2="200" stroke="#af4209" stroke-width="8" opacity="0.3"/>
+    <text x="100" y="108" font-size="80" font-family="Barlow Condensed, Arial Black, sans-serif" font-weight="bold" fill="white" text-anchor="middle" dominant-baseline="central">X</text>
+  </g>
+</svg>

@@ -1,0 +1,642 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — Vibes Front Office Tool{% endblock %}
+
+{% block content %}
+<section class="section">
+<div class="container" style="max-width:1280px;padding:24px 16px;">
+
+  <h1 class="page-title" style="margin-bottom:16px;">Leaderboard</h1>
+
+  <!-- Controls Row 1: Main toggles -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
+    <!-- Sport toggle -->
+    <div class="tab-group" id="sport-toggle">
+      <button class="tab active" onclick="setSport('batting')">Batting</button>
+      <button class="tab" onclick="setSport('pitching')">Pitching</button>
+    </div>
+    <!-- Standard/Advanced toggle -->
+    <div class="tab-group" id="view-toggle">
+      <button class="tab active" onclick="setView('standard')">Standard</button>
+      <button class="tab" onclick="setView('advanced')">Advanced</button>
+    </div>
+    <!-- Overall/HQ toggle -->
+    <div class="tab-group" id="hq-toggle">
+      <button class="tab active" onclick="setHQ(false)">Overall</button>
+      <button class="tab" onclick="setHQ(true)">vs HQ</button>
+    </div>
+    <!-- Raw/Percentile toggle -->
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:0.72rem;color:var(--muted);font-family:var(--font-heading);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">View:</span>
+      <div class="tab-group" id="raw-toggle">
+        <button class="tab active" onclick="setRaw(true)">Raw Stats</button>
+        <button class="tab" onclick="setRaw(false)">Percentile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls Row 2: Filters -->
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;">
+    <select id="season-select" onchange="onSeasonChange()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);font-size:0.85rem;background:#fff;">
+      {% for s in seasons %}
+      <option value="{{ s }}"{% if s == 2025 %} selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+      <option value="career">Career</option>
+    </select>
+    <select id="team-select" onchange="onTeamChange()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);font-size:0.85rem;background:#fff;">
+      <option value="">All Teams</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;cursor:pointer;font-family:var(--font-body);">
+      <input type="checkbox" id="qual-toggle" checked onchange="onQualChange()" style="accent-color:var(--pink);width:1rem;height:1rem;"> Qualified Only
+    </label>
+    <span id="qual-note" style="font-size:0.75rem;color:var(--muted);font-style:italic;"></span>
+    <span id="results-count" style="font-size:0.8rem;color:var(--muted);font-family:var(--font-body);margin-left:4px;"></span>
+  </div>
+
+  <!-- HQ Banner -->
+  <div id="hq-banner" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;color:var(--muted);font-family:var(--font-body);">
+    <span id="hq-banner-text"></span>
+    <a href="/hq-opponents" style="color:var(--blue);text-decoration:none;margin-left:8px;">View full HQ list →</a>
+  </div>
+
+  <!-- Color legend -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;" id="color-legend">
+    <div style="width:120px;height:9px;border-radius:4px;background:linear-gradient(to right,#99c9ea,#ffffff,#d5539b);flex-shrink:0;border:1px solid #e0e0e0;"></div>
+    <span style="font-size:0.7rem;color:var(--muted);font-family:var(--font-body);">Cell shading = percentile rank. Blue = lower, Pink = higher. Inverted for ERA, WHIP, SO, etc.</span>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="lb-loading" style="text-align:center;padding:32px;color:var(--muted);font-family:var(--font-body);">Loading…</div>
+
+  <!-- Table -->
+  <div class="table-wrap" style="overflow-x:auto;display:none;" id="lb-table-wrap">
+    <table class="stats-table" id="lb-table" style="min-width:700px;border-collapse:collapse;">
+      <thead id="lb-thead"></thead>
+      <tbody id="lb-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px;font-family:var(--font-body);font-size:0.85rem;" id="lb-pagination">
+    <button id="page-prev" onclick="changePage(-1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;">← Prev</button>
+    <span id="page-info" style="color:var(--muted);"></span>
+    <button id="page-next" onclick="changePage(1)" style="padding:5px 12px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;">Next →</button>
+  </div>
+
+  <!-- HQ Pool Section -->
+  <div class="hq-pool-section" id="hq-pool-section" style="margin-top:32px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+    <button class="hq-pool-toggle" id="hq-pool-toggle" onclick="toggleHQPool()" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border:none;cursor:pointer;font-family:var(--font-heading);font-weight:700;font-size:0.95rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);">
+      <span>This Season's HQ Pool</span>
+      <span id="hq-pool-chevron" style="font-size:0.8rem;transition:transform 0.2s;">▼</span>
+    </button>
+    <div id="hq-pool-content" style="display:none;padding:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+          <div style="font-family:var(--font-heading);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:8px;">HQ Pitchers <span style="font-weight:400;color:var(--muted);font-size:0.75rem;">(top 20% WHIP)</span></div>
+          <div id="hq-pool-pitchers">Loading...</div>
+          <a id="hq-pool-pitchers-link" href="/hq-opponents" style="font-size:0.78rem;color:var(--blue);text-decoration:none;display:block;margin-top:6px;"></a>
+        </div>
+        <div>
+          <div style="font-family:var(--font-heading);font-weight:700;font-size:0.85rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);margin-bottom:8px;">HQ Batters <span style="font-weight:400;color:var(--muted);font-size:0.75rem;">(top 20% OPS)</span></div>
+          <div id="hq-pool-batters">Loading...</div>
+          <a id="hq-pool-batters-link" href="/hq-opponents" style="font-size:0.78rem;color:var(--pink);text-decoration:none;display:block;margin-top:6px;"></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<style>
+.lb-th {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  padding: 7px 8px;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface);
+}
+.lb-th:hover { color: var(--pink); }
+.lb-th.sort-asc::after { content: ' ↑'; font-size:0.7rem; color:var(--pink); }
+.lb-th.sort-desc::after { content: ' ↓'; font-size:0.7rem; color:var(--pink); }
+.lb-th.player-col { position:sticky;left:0;z-index:2;background:var(--surface); }
+.lb-td { padding:6px 8px;font-family:var(--mono,monospace);font-size:0.82rem;border-bottom:1px solid var(--border);white-space:nowrap; }
+.lb-td.player-col { position:sticky;left:0;z-index:1;background:var(--bg);font-family:var(--font-body);font-weight:600;font-size:0.85rem; }
+.lb-td.rank-col { color:var(--muted);font-size:0.78rem;text-align:right;padding-right:4px; }
+.lb-th.rank-col { padding-right:4px; }
+.lb-row:hover td { background:rgba(153,201,234,0.08) !important; }
+.lb-row.dnq td { color:var(--muted);opacity:0.6; }
+.lb-row.dnq td.player-col { background:var(--bg); }
+.lb-row.dnq td.player-col a { color:var(--muted); }
+.player-thumb-sm { width:22px;height:22px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DISPLAY_NAMES = {{ display_names | tojson }};
+function dname(h) { return DISPLAY_NAMES[h] || h; }
+
+// ── Column definitions ────────────────────────────────────────────────────
+// {key, label, statKey (STAT_CONFIG key for color direction), fmt, pctKey (optional)}
+const BAT_STD_COLS = [
+  {key:'games',label:'G',statKey:'games',fmt:'int',pctKey:'games'},
+  {key:'pa',label:'PA',statKey:'pa',fmt:'int',pctKey:'pa'},
+  {key:'ab',label:'AB',statKey:'ab',fmt:'int',pctKey:'ab'},
+  {key:'r',label:'R',statKey:'r',fmt:'int',pctKey:'r'},
+  {key:'h',label:'H',statKey:'h',fmt:'int',pctKey:'h'},
+  {key:'doubles',label:'2B',statKey:'doubles',fmt:'int',pctKey:'doubles'},
+  {key:'triples',label:'3B',statKey:'triples',fmt:'int',pctKey:'triples'},
+  {key:'hr',label:'HR',statKey:'hr',fmt:'int',pctKey:'hr'},
+  {key:'rbi',label:'RBI',statKey:'rbi',fmt:'int',pctKey:'rbi'},
+  {key:'bb',label:'BB',statKey:'bb',fmt:'int',pctKey:'bb'},
+  {key:'so',label:'SO',statKey:'so',fmt:'int',pctKey:'so'},
+  {key:'avg',label:'AVG',statKey:'avg',fmt:'avg3',pctKey:'avg'},
+  {key:'obp',label:'OBP',statKey:'obp',fmt:'avg3',pctKey:'obp'},
+  {key:'slg',label:'SLG',statKey:'slg',fmt:'avg3',pctKey:'slg'},
+  {key:'ops',label:'OPS',statKey:'ops',fmt:'ops3',pctKey:'ops'},
+];
+
+const BAT_ADV_COLS = [
+  {key:'ops_plus',label:'OPS+',statKey:'ops_plus',fmt:'int',pctKey:'ops_plus'},
+  {key:'iso',label:'ISO',statKey:'iso',fmt:'avg3',pctKey:'iso'},
+  {key:'bat_babip',label:'BABIP',statKey:'babip',fmt:'avg3',pctKey:'bat_babip'},
+  {key:'bb_pct',label:'BB%',statKey:'bb_pct',fmt:'pct1',pctKey:'bb_pct'},
+  {key:'k_pct',label:'K%',statKey:'k_pct',fmt:'pct1',pctKey:'k_pct'},
+  {key:'bb_k',label:'BB/K',statKey:'bb_per_k',fmt:'float2',pctKey:'bb_k'},
+  {key:'ab_hr',label:'AB/HR',statKey:'ab_per_hr',fmt:'float1',pctKey:'ab_hr'},
+  {key:'rc',label:'RC',statKey:'rc',fmt:'float1',pctKey:'rc'},
+];
+
+const PIT_STD_COLS = [
+  {key:'g',label:'G',statKey:'g_p',fmt:'int',pctKey:'g'},
+  {key:'gs',label:'GS',statKey:'gs',fmt:'int',pctKey:'gs'},
+  {key:'w',label:'W',statKey:'w',fmt:'int',pctKey:'w'},
+  {key:'l',label:'L',statKey:'l',fmt:'int',pctKey:'l'},
+  {key:'ip',label:'IP',statKey:'ip',fmt:'float1',pctKey:'ip'},
+  {key:'era',label:'ERA',statKey:'era',fmt:'float2',pctKey:'era'},
+  {key:'whip',label:'WHIP',statKey:'whip',fmt:'float2',pctKey:'whip'},
+  {key:'k',label:'K',statKey:'k_p',fmt:'int',pctKey:'k'},
+  {key:'opp_bb',label:'BB',statKey:'bb_p',fmt:'int',pctKey:'opp_bb'},
+  {key:'ha',label:'H',statKey:'h_p',fmt:'int',pctKey:'ha'},
+  {key:'opp_hr',label:'HR',statKey:'hr_p',fmt:'int',pctKey:'opp_hr'},
+  {key:'baa',label:'BAA',statKey:'baa',fmt:'avg3',pctKey:'baa'},
+];
+
+const PIT_ADV_COLS = [
+  {key:'era_plus',label:'ERA+',statKey:'era_plus',fmt:'int',pctKey:'era_plus'},
+  {key:'k_per_6',label:'K/6',statKey:'k_per_6',fmt:'float2',pctKey:'k_per_6'},
+  {key:'bb_per_6',label:'BB/6',statKey:'bb_per_6',fmt:'float2',pctKey:'bb_per_6'},
+  {key:'hr_per_6',label:'HR/6',statKey:'hr_per_6',fmt:'float2',pctKey:'hr_per_6'},
+  {key:'pit_k_pct',label:'K%',statKey:'k_pct_p',fmt:'pct1',pctKey:'pit_k_pct'},
+  {key:'pit_bb_pct',label:'BB%',statKey:'bb_pct_p',fmt:'pct1',pctKey:'pit_bb_pct'},
+  {key:'pit_babip',label:'BABIP',statKey:'babip_p',fmt:'avg3',pctKey:'pit_babip'},
+  {key:'lob_pct',label:'LOB%',statKey:'lob_pct',fmt:'pct1',pctKey:'lob_pct'},
+];
+
+const HQ_BAT_COLS = [
+  {key:'pa',label:'PA',statKey:'pa_hq',fmt:'int',pctKey:'hq_pa'},
+  {key:'avg',label:'AVG',statKey:'avg_hq',fmt:'avg3',pctKey:'hq_avg'},
+  {key:'obp',label:'OBP',statKey:'obp_hq',fmt:'avg3',pctKey:'hq_obp'},
+  {key:'slg',label:'SLG',statKey:'slg_hq',fmt:'avg3',pctKey:'hq_slg'},
+  {key:'ops',label:'OPS',statKey:'ops_hq',fmt:'ops3',pctKey:'hq_ops'},
+  {key:'hr',label:'HR',statKey:'hr_hq',fmt:'int',pctKey:'hq_hr'},
+  {key:'bb_pct',label:'BB%',statKey:'bb_pct_hq',fmt:'pct1',pctKey:'hq_bb_pct'},
+  {key:'k_pct',label:'K%',statKey:'k_pct_hq',fmt:'pct1',pctKey:'hq_k_pct'},
+  {key:'iso',label:'ISO',statKey:'iso_hq',fmt:'avg3',pctKey:'hq_iso'},
+  {key:'babip',label:'BABIP',statKey:'babip_hq',fmt:'avg3',pctKey:'hq_babip'},
+];
+
+const HQ_PIT_COLS = [
+  {key:'bf',label:'BF',statKey:'bf_hq',fmt:'int',pctKey:'bf'},
+  {key:'era',label:'ERA',statKey:'era_hq',fmt:'float2',pctKey:'era'},
+  {key:'obp_against',label:'OBP',statKey:'obp_hq_p',fmt:'avg3',pctKey:'obp_against'},
+  {key:'baa',label:'BAA',statKey:'baa_hq',fmt:'avg3',pctKey:'baa'},
+  {key:'k_pct',label:'K%',statKey:'k_pct_hq_p',fmt:'pct1',pctKey:'k_pct'},
+  {key:'bb_pct',label:'BB%',statKey:'bb_pct_hq_p',fmt:'pct1',pctKey:'bb_pct'},
+  {key:'k_per_6',label:'K/6',statKey:'k_per_6_hq',fmt:'float2',pctKey:'k_per_6'},
+  {key:'bb_per_6',label:'BB/6',statKey:'bb_per_6_hq',fmt:'float2',pctKey:'bb_per_6'},
+];
+
+// ── State ────────────────────────────────────────────────────────────────
+let _sport = 'batting';
+let _view = 'standard';
+let _hq = false;
+let _raw = true;
+let _season = '2025';
+let _qualOnly = true;
+let _teamFilter = '';
+let _sortCol = null;
+let _sortAsc = false;
+let _page = 1;
+const PAGE_SIZE = 25;
+let _data = null;
+
+
+// ── Number formatting ────────────────────────────────────────────────────
+function fmtStat(val, fmt) {
+  if (val == null || val === '') return '—';
+  const n = parseFloat(val);
+  if (isNaN(n)) return '—';
+  switch(fmt) {
+    case 'int': return Math.round(n);
+    case 'avg3': {
+      const s = Math.abs(n).toFixed(3);
+      return (n < 0 ? '-.' : '.') + s.split('.')[1];
+    }
+    case 'ops3': return n.toFixed(3);
+    case 'pct1': return (n * 100).toFixed(1) + '%';
+    case 'float2': return n.toFixed(2);
+    case 'float1': return n.toFixed(1);
+    default: return val;
+  }
+}
+
+// ── Stat access helpers ──────────────────────────────────────────────────
+function getStatVal(player, key) {
+  const std = player.standard || {};
+  const adv = player.advanced || {};
+  const stats = player.stats || {};
+  return std[key] !== undefined ? std[key] :
+         adv[key] !== undefined ? adv[key] :
+         stats[key] !== undefined ? stats[key] : null;
+}
+
+function getPctVal(player, col) {
+  const pctKey = col.pctKey || col.key;
+  return (player.percentiles || {})[pctKey] ?? null;
+}
+
+// ── Active columns ────────────────────────────────────────────────────────
+function getActiveCols() {
+  if (_hq) return _sport === 'batting' ? HQ_BAT_COLS : HQ_PIT_COLS;
+  if (_view === 'advanced') return _sport === 'batting' ? BAT_ADV_COLS : PIT_ADV_COLS;
+  return _sport === 'batting' ? BAT_STD_COLS : PIT_STD_COLS;
+}
+
+function getDefaultSortKey(cols) {
+  if (_sport === 'pitching') {
+    return cols.find(c => c.key === 'era') ? 'era' : (cols[0] || {}).key;
+  }
+  return cols.find(c => c.key === 'ops') ? 'ops' : (cols[0] || {}).key;
+}
+
+// ── Load data ────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('lb-loading').style.display = '';
+  document.getElementById('lb-table-wrap').style.display = 'none';
+  document.getElementById('lb-pagination').style.display = 'none';
+
+  const endpoint = _hq
+    ? (_sport === 'batting' ? '/api/leaderboard/hq-batting' : '/api/leaderboard/hq-pitching')
+    : (_sport === 'batting' ? '/api/leaderboard/batting' : '/api/leaderboard/pitching');
+
+  const params = new URLSearchParams({
+    season: _season,
+    qualified_only: _qualOnly,
+    team: _teamFilter,
+  });
+
+  try {
+    const res = await fetch(`${endpoint}?${params}`);
+    _data = await res.json();
+    _page = 1;
+    _sortCol = null;
+    renderTable();
+    updateHQBanner();
+    updateQualNote();
+    populateTeamDropdown();
+  } catch(e) {
+    document.getElementById('lb-loading').textContent = 'Error loading data.';
+  }
+}
+
+// ── Populate team dropdown ───────────────────────────────────────────────
+function populateTeamDropdown() {
+  if (!_data) return;
+  const sel = document.getElementById('team-select');
+  const current = sel.value;
+  const teams = new Set();
+  (_data.players || []).forEach(p => { if (p.team) teams.add(p.team); });
+  sel.innerHTML = '<option value="">All Teams</option>';
+  Array.from(teams).sort().forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    if (t === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Render table ─────────────────────────────────────────────────────────
+function renderTable() {
+  if (!_data) return;
+
+  const cols = getActiveCols();
+  let players = [...(_data.players || [])];
+
+  // Sort
+  const defaultKey = getDefaultSortKey(cols);
+  const sortKey = _sortCol || defaultKey;
+  const sortColDef = cols.find(c => c.key === sortKey);
+  const defaultAsc = sortColDef ? !(STAT_CONFIG[sortColDef.statKey]?.higherIsBetter ?? true) : false;
+  const sortAsc = _sortCol ? _sortAsc : defaultAsc;
+
+  players.sort((a, b) => {
+    let av, bv;
+    if (_raw) {
+      av = getStatVal(a, sortKey);
+      bv = getStatVal(b, sortKey);
+    } else {
+      av = getPctVal(a, sortColDef || {key: sortKey});
+      bv = getPctVal(b, sortColDef || {key: sortKey});
+    }
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return sortAsc ? av - bv : bv - av;
+  });
+
+  // Pagination
+  const total = players.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  _page = Math.min(_page, totalPages);
+  const pageStart = (_page - 1) * PAGE_SIZE;
+  const pagePlayers = players.slice(pageStart, pageStart + PAGE_SIZE);
+
+  // Render header
+  let headerHTML = '<tr>';
+  headerHTML += '<th class="lb-th rank-col" style="width:32px;text-align:right;">#</th>';
+  headerHTML += '<th class="lb-th" style="width:30px;"></th>';
+  headerHTML += '<th class="lb-th player-col" style="min-width:110px;cursor:default;">Player</th>';
+  if (!_hq) {
+    headerHTML += `<th class="lb-th" style="cursor:default;color:var(--muted);font-size:0.7rem;">Team</th>`;
+  }
+  cols.forEach(col => {
+    const isSortActive = (_sortCol || defaultKey) === col.key;
+    const sortClass = isSortActive ? (sortAsc ? 'sort-asc' : 'sort-desc') : '';
+    headerHTML += `<th class="lb-th num ${sortClass}" data-key="${col.key}" title="${col.label}">${col.label}</th>`;
+  });
+  headerHTML += '</tr>';
+  document.getElementById('lb-thead').innerHTML = headerHTML;
+
+  // Bind sort handlers
+  document.querySelectorAll('#lb-thead .lb-th[data-key]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (_sortCol === key) {
+        _sortAsc = !_sortAsc;
+      } else {
+        _sortCol = key;
+        const colDef = cols.find(c => c.key === key);
+        _sortAsc = colDef ? !(STAT_CONFIG[colDef.statKey]?.higherIsBetter ?? true) : false;
+      }
+      _page = 1;
+      renderTable();
+    });
+  });
+
+  // Render rows
+  let rank = pageStart;
+  let bodyHTML = '';
+  if (pagePlayers.length === 0) {
+    const colspan = cols.length + (_hq ? 3 : 4);
+    bodyHTML = `<tr><td colspan="${colspan}" style="text-align:center;padding:32px;color:var(--muted);font-family:var(--font-body);">No data for this selection.</td></tr>`;
+  } else {
+    pagePlayers.forEach(player => {
+      const dnq = !player.is_qualified;
+      if (!dnq) rank++;
+      const rowClass = `lb-row${dnq ? ' dnq' : ''}`;
+      const slug = player.player_slug || player.player_name;
+      const name = dname(slug);
+      const pic = player.photo_url || '';
+      let row = `<tr class="${rowClass}" onclick="window.location='/player/${encodeURIComponent(slug)}'" style="cursor:pointer;">`;
+      row += `<td class="lb-td rank-col">${dnq ? '<span style="color:var(--muted)">—</span>' : rank}</td>`;
+      row += `<td class="lb-td" style="padding:4px 4px;"><img src="${pic}" class="player-thumb-sm" onerror="this.style.opacity='0'"></td>`;
+      row += `<td class="lb-td player-col"><a href="/player/${encodeURIComponent(slug)}" style="text-decoration:none;color:var(--text);" onclick="event.stopPropagation()">${name}</a></td>`;
+      if (!_hq) {
+        row += `<td class="lb-td" style="color:var(--muted);font-size:0.78rem;font-family:var(--font-body);">${player.team || ''}</td>`;
+      }
+      cols.forEach(col => {
+        let val, displayVal, bgColor = '';
+        if (_raw) {
+          val = getStatVal(player, col.key);
+          displayVal = fmtStat(val, col.fmt);
+          const pct = getPctVal(player, col);
+          if (pct != null && !dnq) {
+            // Stored percentiles are already direction-encoded: high pct = elite for ALL stats.
+            // (ERA 98th pct = best ERA, SO 99th pct = fewest SO, etc.)
+            // Do NOT invert — always pass true so colorPct = pct directly.
+            bgColor = `background-color:${getPercentileColor(pct, true)};`;
+          }
+        } else {
+          // Percentile mode: show the percentile number, color by percentile
+          const pct = getPctVal(player, col);
+          displayVal = pct != null ? Math.round(pct) : '—';
+          if (pct != null && !dnq) {
+            bgColor = `background-color:${getPercentileColor(pct, true)};`;
+          }
+        }
+        row += `<td class="lb-td num" style="text-align:right;${bgColor}">${displayVal}</td>`;
+      });
+      row += '</tr>';
+      bodyHTML += row;
+    });
+  }
+  document.getElementById('lb-tbody').innerHTML = bodyHTML;
+
+  // Update results count
+  const qualCount = players.filter(p => p.is_qualified).length;
+  document.getElementById('results-count').textContent =
+    `${total} player${total !== 1 ? 's' : ''}${_qualOnly ? '' : ` (${qualCount} qualified)`}`;
+
+  // Update qual note
+  let qNote = '';
+  if (!_hq) {
+    if (_sport === 'batting') {
+      qNote = _data.qualifier_pa ? `min ${_data.qualifier_pa} PA` : '';
+    } else {
+      const ip = _data.qualifier_ip;
+      const g = _data.qualifier_g;
+      qNote = ip ? `min ${ip} IP${g ? ` or ${g} G` : ''}` : '';
+    }
+  } else {
+    qNote = _sport === 'batting' ? 'min 15 PA vs HQ' : 'min 15 BF vs HQ';
+  }
+  document.getElementById('qual-note').textContent = qNote;
+
+  // Show table, hide loader
+  document.getElementById('lb-loading').style.display = 'none';
+  document.getElementById('lb-table-wrap').style.display = '';
+
+  // Update pagination
+  document.getElementById('lb-pagination').style.display = '';
+  document.getElementById('page-info').textContent = `Page ${_page} of ${totalPages} (${total} players)`;
+  document.getElementById('page-prev').disabled = _page <= 1;
+  document.getElementById('page-next').disabled = _page >= totalPages;
+  document.getElementById('page-prev').style.opacity = _page <= 1 ? '0.4' : '1';
+  document.getElementById('page-next').style.opacity = _page >= totalPages ? '0.4' : '1';
+}
+
+function changePage(delta) {
+  _page += delta;
+  _page = Math.max(1, _page);
+  renderTable();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+// ── HQ Banner ────────────────────────────────────────────────────────────
+function updateHQBanner() {
+  const banner = document.getElementById('hq-banner');
+  const bannerText = document.getElementById('hq-banner-text');
+  if (_hq && _data) {
+    banner.style.display = '';
+    const meta = _data.hq_meta || {};
+    if (_sport === 'batting') {
+      const cutoff = meta.batter_cutoff_ops;
+      const cnt = meta.batter_count || (_data.qualified_count);
+      bannerText.textContent = `Batting stats vs HQ pitchers (top 20% WHIP${cutoff ? ', cutoff: ' + cutoff.toFixed(3) : ''}). ${_data.qualified_count} qualified players (min 15 PA).`;
+    } else {
+      const cutoff = meta.pitcher_cutoff_whip;
+      const cnt = meta.pitcher_count || (_data.qualified_count);
+      bannerText.textContent = `Pitching stats vs HQ batters (top 20% OPS${cutoff ? ', cutoff: ' + cutoff.toFixed(3) : ''}). ${_data.qualified_count} qualified pitchers (min 15 BF).`;
+    }
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function updateQualNote() {
+  // handled in renderTable
+}
+
+// ── Toggle handlers ──────────────────────────────────────────────────────
+function setSport(sport) {
+  _sport = sport;
+  _sortCol = null;
+  _page = 1;
+  document.querySelectorAll('#sport-toggle .tab').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && sport === 'batting') || (i === 1 && sport === 'pitching'));
+  });
+  loadData();
+}
+
+function setView(view) {
+  _view = view;
+  _sortCol = null;
+  _page = 1;
+  document.querySelectorAll('#view-toggle .tab').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && view === 'standard') || (i === 1 && view === 'advanced'));
+  });
+  if (_data) renderTable(); else loadData();
+}
+
+function setHQ(hq) {
+  _hq = hq;
+  _sortCol = null;
+  _page = 1;
+  document.querySelectorAll('#hq-toggle .tab').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && !hq) || (i === 1 && hq));
+  });
+  // Disable advanced toggle in HQ mode
+  document.querySelectorAll('#view-toggle .tab').forEach(b => {
+    b.style.opacity = hq ? '0.4' : '';
+    b.style.pointerEvents = hq ? 'none' : '';
+  });
+  loadData();
+}
+
+function setRaw(raw) {
+  _raw = raw;
+  document.querySelectorAll('#raw-toggle .tab').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && raw) || (i === 1 && !raw));
+  });
+  if (_data) renderTable();
+}
+
+function onSeasonChange() {
+  _season = document.getElementById('season-select').value;
+  _page = 1;
+  _sortCol = null;
+  // Disable team filter for career
+  if (_season === 'career') {
+    document.getElementById('team-select').value = '';
+    _teamFilter = '';
+  }
+  loadData();
+}
+
+function onTeamChange() {
+  _teamFilter = document.getElementById('team-select').value;
+  _page = 1;
+  loadData();
+}
+
+function onQualChange() {
+  _qualOnly = document.getElementById('qual-toggle').checked;
+  _page = 1;
+  loadData();
+}
+
+// ── HQ Pool Section ──────────────────────────────────────────────────────
+function toggleHQPool() {
+  const content = document.getElementById('hq-pool-content');
+  const chevron = document.getElementById('hq-pool-chevron');
+  const open = content.style.display === 'none';
+  content.style.display = open ? '' : 'none';
+  chevron.style.transform = open ? 'rotate(180deg)' : '';
+  if (open && !window._hqPoolLoaded) loadHQPool();
+}
+
+function loadHQPool() {
+  const season = _season === 'career' ? '2025' : _season;
+  if (_season === 'career') {
+    document.getElementById('hq-pool-pitchers').textContent = 'Select a specific season to view HQ pool.';
+    document.getElementById('hq-pool-batters').textContent = '';
+    return;
+  }
+  fetch('/api/hq-opponents?season=' + season)
+    .then(r => r.json())
+    .then(data => {
+      window._hqPoolLoaded = true;
+      const pitDiv = document.getElementById('hq-pool-pitchers');
+      const batDiv = document.getElementById('hq-pool-batters');
+      const pitRows = (data.hq_pitchers || []).slice(0, 10);
+      pitDiv.innerHTML = pitRows.map(p => `
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+          <img src="${p.photo_url}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+          <a href="/player/${encodeURIComponent(p.player_slug)}" style="flex:1;text-decoration:none;color:var(--text);font-size:0.85rem;">${p.player_name}</a>
+          <span style="font-family:var(--mono);font-size:0.8rem;color:var(--blue);">${p.whip != null ? p.whip.toFixed(3) : '—'}</span>
+        </div>`).join('');
+      const batRows = (data.hq_batters || []).slice(0, 10);
+      batDiv.innerHTML = batRows.map(b => `
+        <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);">
+          <img src="${b.photo_url}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'">
+          <a href="/player/${encodeURIComponent(b.player_slug)}" style="flex:1;text-decoration:none;color:var(--text);font-size:0.85rem;">${b.player_name}</a>
+          <span style="font-family:var(--mono);font-size:0.8rem;color:var(--pink);">${b.ops != null ? b.ops.toFixed(3) : '—'}</span>
+        </div>`).join('');
+      const sm = data.season_meta || {};
+      const pitLink = document.getElementById('hq-pool-pitchers-link');
+      const batLink = document.getElementById('hq-pool-batters-link');
+      if (sm.total_hq_pitchers > 10) pitLink.textContent = `See all ${sm.total_hq_pitchers} HQ pitchers \u2192`;
+      else pitLink.textContent = '';
+      if (sm.total_hq_batters > 10) batLink.textContent = `See all ${sm.total_hq_batters} HQ batters \u2192`;
+      else batLink.textContent = '';
+      if (pitLink.textContent) pitLink.href = `/hq-opponents?season=${season}`;
+      if (batLink.textContent) batLink.href = `/hq-opponents?season=${season}`;
+    })
+    .catch(() => {
+      document.getElementById('hq-pool-pitchers').textContent = 'Error loading';
+      document.getElementById('hq-pool-batters').textContent = 'Error loading';
+    });
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+loadData();
+</script>
+{% endblock %}
