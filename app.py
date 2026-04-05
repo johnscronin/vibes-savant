@@ -1613,6 +1613,410 @@ def api_leaderboard_hq_pitching():
     })
 
 
+# ── API: All pitchers / batters for custom pool modal ───────────────────────
+@app.route('/api/players/all-pitchers')
+def api_all_pitchers():
+    """Return all players with pitching stats + their seasons list."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT ps.player_hashtag as slug,
+               COALESCE(pl.nickname, ps.player_hashtag) as name,
+               GROUP_CONCAT(DISTINCT ps.season) as seasons
+        FROM pitching_stats ps
+        LEFT JOIN players pl ON pl.hashtag = ps.player_hashtag
+        WHERE ps.ip > 0
+        GROUP BY ps.player_hashtag
+        ORDER BY COALESCE(pl.nickname, ps.player_hashtag)
+    """).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        seas = sorted([int(s) for s in (r['seasons'] or '').split(',') if s.strip()])
+        result.append({'name': r['name'], 'slug': r['slug'], 'seasons': seas})
+    return jsonify(result)
+
+
+@app.route('/api/players/all-batters')
+def api_all_batters():
+    """Return all players with batting stats + their seasons list."""
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT bs.player_hashtag as slug,
+               COALESCE(pl.nickname, bs.player_hashtag) as name,
+               GROUP_CONCAT(DISTINCT bs.season) as seasons
+        FROM batting_stats bs
+        LEFT JOIN players pl ON pl.hashtag = bs.player_hashtag
+        WHERE bs.ab > 0
+        GROUP BY bs.player_hashtag
+        ORDER BY COALESCE(pl.nickname, bs.player_hashtag)
+    """).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        seas = sorted([int(s) for s in (r['seasons'] or '').split(',') if s.strip()])
+        result.append({'name': r['name'], 'slug': r['slug'], 'seasons': seas})
+    return jsonify(result)
+
+
+def _compute_custom_percentiles(players_stats, stat_keys_asc):
+    """
+    Compute within-pool percentile ranks for each player.
+    stat_keys_asc: dict of stat_key -> True means higher is better, False means lower is better.
+    Returns dict of player_slug -> {stat_key: percentile}
+    """
+    n = len(players_stats)
+    if n < 5:
+        return {p['player_slug']: {} for p in players_stats}
+
+    result = {}
+    for p in players_stats:
+        result[p['player_slug']] = {}
+
+    for stat_key, higher_is_better in stat_keys_asc.items():
+        vals = []
+        for p in players_stats:
+            v = p.get('_raw', {}).get(stat_key)
+            if v is not None:
+                try:
+                    vals.append(float(v))
+                except Exception:
+                    pass
+
+        if not vals:
+            continue
+
+        for p in players_stats:
+            slug = p['player_slug']
+            v = p.get('_raw', {}).get(stat_key)
+            if v is None:
+                continue
+            try:
+                fv = float(v)
+            except Exception:
+                continue
+            if higher_is_better:
+                worse_count = sum(1 for x in vals if x < fv)
+            else:
+                worse_count = sum(1 for x in vals if x > fv)
+            pct = round((worse_count / n) * 100)
+            pct = max(1, min(99, pct))
+            result[slug][stat_key] = pct
+
+    return result
+
+
+@app.route('/api/leaderboard/custom-batting', methods=['POST'])
+def api_leaderboard_custom_batting():
+    """Batting stats for all batters, filtered to PAs vs a custom pitcher pool."""
+    body = request.get_json(force=True) or {}
+    pitchers = body.get('pitchers', [])  # list of pitcher display names or slugs
+    season = body.get('season', 2025)
+    qualified_only = body.get('qualified_only', True)
+
+    try:
+        season_int = int(season)
+    except Exception:
+        season_int = 2025
+
+    if not pitchers:
+        return jsonify({'error': 'No pitchers specified', 'players': [], 'warning': 'Pool too small for reliable percentiles — showing raw stats only'}), 200
+
+    conn = get_db()
+
+    # Build name map: nickname -> hashtag and vice versa
+    name_rows = conn.execute("SELECT hashtag, nickname FROM players").fetchall()
+    nickname_to_slug = {r['nickname']: r['hashtag'] for r in name_rows if r['nickname']}
+    slug_to_nickname = {r['hashtag']: r['nickname'] or r['hashtag'] for r in name_rows}
+
+    # Resolve pitcher names to display names used in batter_vs_pitcher.opposing_pitcher
+    # batter_vs_pitcher uses nickname (display name) for opposing_pitcher
+    resolved_pitchers = set()
+    for p in pitchers:
+        p = p.strip()
+        if not p:
+            continue
+        # Try as nickname directly
+        resolved_pitchers.add(p)
+        # Try as slug -> nickname
+        if p in slug_to_nickname:
+            resolved_pitchers.add(slug_to_nickname[p])
+
+    if not resolved_pitchers:
+        conn.close()
+        return jsonify({'players': [], 'warning': 'No valid pitchers in pool'}), 200
+
+    placeholders = ','.join('?' * len(resolved_pitchers))
+    season_str = str(season_int)
+
+    # Aggregate batting stats vs the given pitchers
+    rows = conn.execute(f"""
+        SELECT bvp.player_name,
+               COALESCE(bvp.player_slug, bvp.player_name) as player_slug,
+               SUM(bvp.ab) as ab,
+               SUM(bvp.h) as h,
+               SUM(bvp.hr) as hr,
+               SUM(bvp.rbi) as rbi,
+               SUM(bvp.bb) as bb,
+               SUM(bvp.so) as so,
+               SUM(bvp.doubles) as doubles,
+               SUM(bvp.triples) as triples,
+               SUM(bvp.sac) as sac,
+               SUM(bvp.g) as g
+        FROM batter_vs_pitcher bvp
+        WHERE bvp.season=? AND bvp.opposing_pitcher IN ({placeholders})
+          AND bvp.tab_type='regular'
+        GROUP BY bvp.player_name, bvp.player_slug
+        HAVING SUM(bvp.ab) > 0
+        ORDER BY SUM(bvp.h) DESC
+    """, [season_str] + list(resolved_pitchers)).fetchall()
+
+    pic_rows = conn.execute("SELECT hashtag, pic_url FROM players").fetchall()
+    pic_map = {r['hashtag']: fix_pic_url(r['pic_url'] or '') for r in pic_rows}
+    conn.close()
+
+    CUSTOM_BAT_MIN_PA = 10
+
+    players_out = []
+    for r in rows:
+        rd = dict(r)
+        ab = rd.get('ab') or 0
+        h = rd.get('h') or 0
+        hr = rd.get('hr') or 0
+        bb = rd.get('bb') or 0
+        so = rd.get('so') or 0
+        doubles = rd.get('doubles') or 0
+        triples = rd.get('triples') or 0
+        sac = rd.get('sac') or 0
+        singles = h - doubles - triples - hr
+
+        pa = ab + bb + sac
+        if ab == 0:
+            continue
+
+        avg = round(h / ab, 3) if ab > 0 else 0
+        obp = round((h + bb) / (ab + bb) if (ab + bb) > 0 else 0, 3)
+        slg_num = singles + doubles * 2 + triples * 3 + hr * 4
+        slg = round(slg_num / ab, 3) if ab > 0 else 0
+        ops = round(obp + slg, 3)
+        iso = round(slg - avg, 3)
+        bb_pct = round(bb / pa, 4) if pa > 0 else 0
+        k_pct = round(so / pa, 4) if pa > 0 else 0
+        bb_k = round(bb / so, 3) if so > 0 else None
+        # BABIP: (H - HR) / (AB - K - HR + SAC)
+        babip_denom = ab - so - hr + sac
+        babip = round((h - hr) / babip_denom, 3) if babip_denom > 0 else None
+
+        slug = rd.get('player_slug') or rd.get('player_name', '')
+        is_q = pa >= CUSTOM_BAT_MIN_PA
+
+        players_out.append({
+            'player_name': rd.get('player_name', slug),
+            'player_slug': slug,
+            'photo_url': pic_map.get(slug, MASCOT_URL),
+            'team': '',
+            'is_qualified': is_q,
+            'stats': {
+                'pa': pa, 'avg': avg, 'obp': obp, 'slg': slg, 'ops': ops,
+                'hr': hr, 'bb_pct': bb_pct, 'k_pct': k_pct,
+                'iso': iso, 'babip': babip,
+            },
+            '_raw': {
+                'pa': pa, 'avg': avg, 'obp': obp, 'slg': slg, 'ops': ops,
+                'hr': hr, 'bb_pct': bb_pct, 'k_pct': k_pct,
+                'iso': iso, 'babip': babip,
+            },
+            'percentiles': {},
+        })
+
+    if qualified_only:
+        players_out = [p for p in players_out if p['is_qualified']]
+
+    warning = None
+    if len(players_out) < 5:
+        warning = 'Pool too small for reliable percentiles — showing raw stats only'
+    else:
+        pct_stats = {
+            'ops': True, 'avg': True, 'obp': True, 'slg': True,
+            'hr': True, 'bb_pct': True, 'k_pct': False,
+            'iso': True, 'babip': True, 'pa': True,
+        }
+        pcts = _compute_custom_percentiles(players_out, pct_stats)
+        for p in players_out:
+            p['percentiles'] = pcts.get(p['player_slug'], {})
+
+    for p in players_out:
+        p.pop('_raw', None)
+
+    players_out.sort(key=lambda x: x['stats'].get('ops') or 0, reverse=True)
+
+    return jsonify({
+        'season': season_int,
+        'qualifier_pa': CUSTOM_BAT_MIN_PA,
+        'total_players': len(players_out),
+        'qualified_count': sum(1 for p in players_out if p['is_qualified']),
+        'custom_pool': {'pitchers': list(resolved_pitchers)},
+        'warning': warning,
+        'players': players_out,
+    })
+
+
+@app.route('/api/leaderboard/custom-pitching', methods=['POST'])
+def api_leaderboard_custom_pitching():
+    """Pitching stats for all pitchers, filtered to BFs vs a custom batter pool."""
+    body = request.get_json(force=True) or {}
+    batters = body.get('batters', [])  # list of batter display names or slugs
+    season = body.get('season', 2025)
+    qualified_only = body.get('qualified_only', True)
+
+    try:
+        season_int = int(season)
+    except Exception:
+        season_int = 2025
+
+    if not batters:
+        return jsonify({'error': 'No batters specified', 'players': [], 'warning': 'Pool too small for reliable percentiles — showing raw stats only'}), 200
+
+    conn = get_db()
+
+    name_rows = conn.execute("SELECT hashtag, nickname FROM players").fetchall()
+    slug_to_nickname = {r['hashtag']: r['nickname'] or r['hashtag'] for r in name_rows}
+    nickname_to_slug = {r['nickname']: r['hashtag'] for r in name_rows if r['nickname']}
+
+    # Resolve batter names to display names used as player_name in batter_vs_pitcher
+    # batter_vs_pitcher.player_name is also typically the display name / hashtag
+    # We query by player_name matching resolved display names
+    resolved_batters = set()
+    for b in batters:
+        b = b.strip()
+        if not b:
+            continue
+        resolved_batters.add(b)
+        # Also try slug -> nickname
+        if b in slug_to_nickname:
+            resolved_batters.add(slug_to_nickname[b])
+
+    if not resolved_batters:
+        conn.close()
+        return jsonify({'players': [], 'warning': 'No valid batters in pool'}), 200
+
+    placeholders = ','.join('?' * len(resolved_batters))
+    season_str = str(season_int)
+
+    # Aggregate: for each opposing_pitcher, sum stats from these batters
+    rows = conn.execute(f"""
+        SELECT bvp.opposing_pitcher as pitcher_name,
+               SUM(bvp.ab) as ab,
+               SUM(bvp.h) as h,
+               SUM(bvp.hr) as hr,
+               SUM(bvp.bb) as bb,
+               SUM(bvp.so) as so,
+               SUM(bvp.doubles) as doubles,
+               SUM(bvp.triples) as triples,
+               SUM(bvp.sac) as sac,
+               SUM(bvp.g) as g
+        FROM batter_vs_pitcher bvp
+        WHERE bvp.season=? AND bvp.player_name IN ({placeholders})
+          AND bvp.tab_type='regular'
+        GROUP BY bvp.opposing_pitcher
+        HAVING SUM(bvp.ab) > 0
+        ORDER BY SUM(bvp.ab) DESC
+    """, [season_str] + list(resolved_batters)).fetchall()
+
+    # Get photo URLs keyed by nickname
+    pic_rows = conn.execute("SELECT hashtag, pic_url, nickname FROM players").fetchall()
+    pic_by_nick = {r['nickname']: fix_pic_url(r['pic_url'] or '') for r in pic_rows if r['nickname']}
+    pic_by_slug = {r['hashtag']: fix_pic_url(r['pic_url'] or '') for r in pic_rows}
+    slug_by_nick = {r['nickname']: r['hashtag'] for r in pic_rows if r['nickname']}
+    conn.close()
+
+    CUSTOM_PIT_MIN_BF = 10
+
+    players_out = []
+    for r in rows:
+        rd = dict(r)
+        pitcher_name = rd.get('pitcher_name', '')
+        ab = rd.get('ab') or 0
+        h = rd.get('h') or 0
+        hr = rd.get('hr') or 0
+        bb = rd.get('bb') or 0
+        so = rd.get('so') or 0
+        doubles = rd.get('doubles') or 0
+        triples = rd.get('triples') or 0
+        sac = rd.get('sac') or 0
+
+        if ab == 0:
+            continue
+
+        bf = ab + bb + sac
+
+        # ERA can't be calculated from batter_vs_pitcher (no ER data)
+        # BAA = H / AB
+        baa = round(h / ab, 3) if ab > 0 else 0
+        # OBP against = (H + BB) / (AB + BB)
+        obp_against = round((h + bb) / (ab + bb), 3) if (ab + bb) > 0 else 0
+        # K%
+        k_pct = round(so / bf, 4) if bf > 0 else 0
+        # BB%
+        bb_pct = round(bb / bf, 4) if bf > 0 else 0
+        # K/6 (like K/9 but per 6 outs)
+        k_per_6 = round(so / ab * 6, 2) if ab > 0 else 0
+        bb_per_6 = round(bb / ab * 6, 2) if ab > 0 else 0
+
+        slug = slug_by_nick.get(pitcher_name, pitcher_name)
+        pic = pic_by_nick.get(pitcher_name, pic_by_slug.get(slug, MASCOT_URL))
+        is_q = bf >= CUSTOM_PIT_MIN_BF
+
+        players_out.append({
+            'player_name': pitcher_name,
+            'player_slug': slug,
+            'photo_url': pic,
+            'team': '',
+            'is_qualified': is_q,
+            'stats': {
+                'bf': bf, 'era': None,
+                'obp_against': obp_against, 'baa': baa,
+                'k_pct': k_pct, 'bb_pct': bb_pct,
+                'k_per_6': k_per_6, 'bb_per_6': bb_per_6,
+            },
+            '_raw': {
+                'bf': bf, 'obp_against': obp_against, 'baa': baa,
+                'k_pct': k_pct, 'bb_pct': bb_pct,
+                'k_per_6': k_per_6, 'bb_per_6': bb_per_6,
+            },
+            'percentiles': {},
+        })
+
+    if qualified_only:
+        players_out = [p for p in players_out if p['is_qualified']]
+
+    warning = None
+    if len(players_out) < 5:
+        warning = 'Pool too small for reliable percentiles — showing raw stats only'
+    else:
+        pct_stats = {
+            'baa': False, 'obp_against': False, 'k_pct': True, 'bb_pct': False,
+            'k_per_6': True, 'bb_per_6': False, 'bf': True,
+        }
+        pcts = _compute_custom_percentiles(players_out, pct_stats)
+        for p in players_out:
+            p['percentiles'] = pcts.get(p['player_slug'], {})
+
+    for p in players_out:
+        p.pop('_raw', None)
+
+    players_out.sort(key=lambda x: x['stats'].get('baa') or 1.0)
+
+    return jsonify({
+        'season': season_int,
+        'qualifier_bf': CUSTOM_PIT_MIN_BF,
+        'total_players': len(players_out),
+        'qualified_count': sum(1 for p in players_out if p['is_qualified']),
+        'custom_pool': {'batters': list(resolved_batters)},
+        'warning': warning,
+        'players': players_out,
+    })
+
+
 # ── API: DB stats for hero section ───────────────────────────────────────────
 @app.route('/api/home/leaderboard')
 def api_home_leaderboard():

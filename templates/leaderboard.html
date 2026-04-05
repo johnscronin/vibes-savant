@@ -22,8 +22,10 @@
     <!-- Overall/HQ toggle -->
     <div class="tab-group" id="hq-toggle">
       <button class="tab active" onclick="setHQ(false)">Overall</button>
-      <button class="tab" onclick="setHQ(true)">vs HQ</button>
+      <button class="tab" id="hq-tab-btn" onclick="setHQ(true)">vs HQ <span id="hq-tab-badge" style="display:none;background:#d5539b;color:#fff;border-radius:10px;font-size:0.68rem;padding:1px 6px;margin-left:4px;vertical-align:middle;"></span></button>
     </div>
+    <!-- Build Custom Pool button -->
+    <button id="custom-pool-btn" onclick="openCustomPoolModal()" style="padding:5px 12px;border:1px solid #d5539b;border-radius:6px;background:transparent;color:#d5539b;font-family:var(--font-heading);font-weight:700;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;cursor:pointer;white-space:nowrap;">Build Custom Pool</button>
     <!-- Raw/Percentile toggle -->
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
       <span style="font-size:0.72rem;color:var(--muted);font-family:var(--font-heading);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;">View:</span>
@@ -55,7 +57,15 @@
   <!-- HQ Banner -->
   <div id="hq-banner" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;color:var(--muted);font-family:var(--font-body);">
     <span id="hq-banner-text"></span>
-    <a href="/hq-opponents" style="color:var(--blue);text-decoration:none;margin-left:8px;">View full HQ list →</a>
+    <a id="hq-banner-link" href="/hq-opponents" style="color:var(--blue);text-decoration:none;margin-left:8px;">View full HQ list →</a>
+  </div>
+  <!-- HQ Subnote -->
+  <div id="hq-subnote" style="display:none;font-size:0.75rem;color:var(--muted);font-family:var(--font-body);margin-bottom:8px;padding:4px 0;">
+    <span id="hq-subnote-text">HQ Pitchers = Manually curated elite pitchers (2025) · HQ Batters = Top 20% of Batters by OPS</span>
+  </div>
+  <!-- Custom Pool Warning -->
+  <div id="custom-pool-warning" style="display:none;background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;color:#7a5c00;font-family:var(--font-body);">
+    <span id="custom-pool-warning-text"></span>
   </div>
 
   <!-- Color legend -->
@@ -106,6 +116,62 @@
 
 </div>
 </section>
+
+<!-- Custom Pool Modal -->
+<div id="custom-pool-modal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:10px;max-width:620px;width:95%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+    <!-- Modal Header -->
+    <div style="padding:18px 20px 12px;border-bottom:1px solid var(--border);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--text);">Build Custom Opponent Pool</div>
+          <div style="font-size:0.78rem;color:var(--muted);font-family:var(--font-body);margin-top:3px;">Select specific pitchers or batters to use as your opponent pool. Replaces the HQ tab for this session.</div>
+        </div>
+        <button onclick="closeCustomPoolModal()" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:4px 8px;line-height:1;">&times;</button>
+      </div>
+      <!-- Modal Tabs -->
+      <div style="display:flex;gap:0;margin-top:12px;border-bottom:2px solid var(--border);">
+        <button id="modal-tab-pitchers" onclick="switchModalTab('pitchers')" style="padding:7px 18px;border:none;border-bottom:2px solid #d5539b;margin-bottom:-2px;background:none;font-family:var(--font-heading);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:#d5539b;cursor:pointer;">Select Pitchers</button>
+        <button id="modal-tab-batters" onclick="switchModalTab('batters')" style="padding:7px 18px;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;font-family:var(--font-heading);font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);cursor:pointer;">Select Batters</button>
+      </div>
+    </div>
+    <!-- Modal Body -->
+    <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <!-- Pitchers Panel -->
+      <div id="modal-panel-pitchers" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="padding:10px 16px 6px;display:flex;align-items:center;gap:8px;">
+          <input id="pitcher-search" oninput="filterModalList('pitchers')" placeholder="Search pitchers..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);font-size:0.85rem;">
+          <button onclick="selectAllModal('pitchers')" style="padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:0.75rem;font-family:var(--font-body);cursor:pointer;">Select All</button>
+          <button onclick="clearAllModal('pitchers')" style="padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:0.75rem;font-family:var(--font-body);cursor:pointer;">Clear All</button>
+        </div>
+        <div style="padding:2px 16px 4px;font-size:0.75rem;color:var(--muted);font-family:var(--font-body);">
+          <span id="pitcher-count-label">0 pitchers selected</span>
+        </div>
+        <div id="pitcher-list" style="flex:1;overflow-y:auto;padding:4px 16px 10px;"></div>
+      </div>
+      <!-- Batters Panel -->
+      <div id="modal-panel-batters" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+        <div style="padding:10px 16px 6px;display:flex;align-items:center;gap:8px;">
+          <input id="batter-search" oninput="filterModalList('batters')" placeholder="Search batters..." style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);font-size:0.85rem;">
+          <button onclick="selectAllModal('batters')" style="padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:0.75rem;font-family:var(--font-body);cursor:pointer;">Select All</button>
+          <button onclick="clearAllModal('batters')" style="padding:5px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:0.75rem;font-family:var(--font-body);cursor:pointer;">Clear All</button>
+        </div>
+        <div style="padding:2px 16px 4px;font-size:0.75rem;color:var(--muted);font-family:var(--font-body);">
+          <span id="batter-count-label">0 batters selected</span>
+        </div>
+        <div id="batter-list" style="flex:1;overflow-y:auto;padding:4px 16px 10px;"></div>
+      </div>
+    </div>
+    <!-- Modal Validation Error -->
+    <div id="modal-error" style="display:none;padding:4px 20px;font-size:0.78rem;color:#c0392b;font-family:var(--font-body);background:#fff0ef;"></div>
+    <!-- Modal Footer -->
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+      <button onclick="resetToHQDefaults()" style="padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;font-family:var(--font-body);font-size:0.82rem;cursor:pointer;color:var(--muted);">Reset to HQ Defaults</button>
+      <button onclick="closeCustomPoolModal()" style="padding:7px 14px;border:1px solid var(--border);border-radius:6px;background:#fff;font-family:var(--font-body);font-size:0.82rem;cursor:pointer;">Cancel</button>
+      <button onclick="applyCustomPool()" style="padding:7px 16px;border:none;border-radius:6px;background:#d5539b;color:#fff;font-family:var(--font-heading);font-weight:700;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;">Apply Pool</button>
+    </div>
+  </div>
+</div>
 
 <style>
 .lb-th {
@@ -237,6 +303,15 @@ let _sortAsc = false;
 let _page = 1;
 const PAGE_SIZE = 25;
 let _data = null;
+let _customPool = null; // null = HQ defaults, object = custom pool active
+
+// ── Custom Pool State ─────────────────────────────────────────────────────
+let _allPitchers = [];
+let _allBatters = [];
+let _modalPitcherSel = new Set();
+let _modalBatterSel = new Set();
+let _modalTab = 'pitchers';
+let _modalLoaded = false;
 
 
 // ── Number formatting ────────────────────────────────────────────────────
@@ -292,24 +367,71 @@ async function loadData() {
   document.getElementById('lb-loading').style.display = '';
   document.getElementById('lb-table-wrap').style.display = 'none';
   document.getElementById('lb-pagination').style.display = 'none';
+  document.getElementById('custom-pool-warning').style.display = 'none';
 
-  const endpoint = _hq
-    ? (_sport === 'batting' ? '/api/leaderboard/hq-batting' : '/api/leaderboard/hq-pitching')
-    : (_sport === 'batting' ? '/api/leaderboard/batting' : '/api/leaderboard/pitching');
-
-  const params = new URLSearchParams({
-    season: _season,
-    qualified_only: _qualOnly,
-    team: _teamFilter,
-  });
-
+  let res;
   try {
-    const res = await fetch(`${endpoint}?${params}`);
+    if (_hq && _customPool && _customPool.active) {
+      // Use custom pool endpoints (POST)
+      const season_int = (_season === 'career') ? 2025 : parseInt(_season);
+      if (_sport === 'batting') {
+        res = await fetch('/api/leaderboard/custom-batting', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            pitchers: _customPool.pitchers,
+            season: season_int,
+            qualified_only: _qualOnly,
+          })
+        });
+      } else {
+        res = await fetch('/api/leaderboard/custom-pitching', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            batters: _customPool.batters,
+            season: season_int,
+            qualified_only: _qualOnly,
+          })
+        });
+      }
+    } else {
+      // Standard or HQ endpoints (GET)
+      const endpoint = _hq
+        ? (_sport === 'batting' ? '/api/leaderboard/hq-batting' : '/api/leaderboard/hq-pitching')
+        : (_sport === 'batting' ? '/api/leaderboard/batting' : '/api/leaderboard/pitching');
+      const params = new URLSearchParams({
+        season: _season,
+        qualified_only: _qualOnly,
+        team: _teamFilter,
+      });
+      res = await fetch(`${endpoint}?${params}`);
+    }
+
     _data = await res.json();
     _page = 1;
     _sortCol = null;
+
+    // Show warning if present
+    if (_data.warning) {
+      document.getElementById('custom-pool-warning-text').textContent = _data.warning;
+      document.getElementById('custom-pool-warning').style.display = '';
+    }
+    // Handle no data
+    if (_hq && _customPool && _customPool.active && (!_data.players || _data.players.length === 0)) {
+      document.getElementById('lb-loading').style.display = 'none';
+      document.getElementById('lb-table-wrap').style.display = '';
+      document.getElementById('lb-tbody').innerHTML = `<tr><td colspan="20" style="text-align:center;padding:32px;color:var(--muted);font-family:var(--font-body);">No plate appearance data found for this combination.</td></tr>`;
+      document.getElementById('lb-thead').innerHTML = '';
+      document.getElementById('lb-pagination').style.display = 'none';
+      updateHQBanner();
+      updateHQSubnote();
+      return;
+    }
+
     renderTable();
     updateHQBanner();
+    updateHQSubnote();
     updateQualNote();
     populateTeamDropdown();
   } catch(e) {
@@ -494,20 +616,50 @@ function changePage(delta) {
 function updateHQBanner() {
   const banner = document.getElementById('hq-banner');
   const bannerText = document.getElementById('hq-banner-text');
+  const bannerLink = document.getElementById('hq-banner-link');
   if (_hq && _data) {
     banner.style.display = '';
-    const meta = _data.hq_meta || {};
-    if (_sport === 'batting') {
-      const cutoff = meta.batter_cutoff_ops;
-      const cnt = meta.batter_count || (_data.qualified_count);
-      bannerText.textContent = `Batting stats vs HQ pitchers (top 20% WHIP${cutoff ? ', cutoff: ' + cutoff.toFixed(3) : ''}). ${_data.qualified_count} qualified players (min 15 PA).`;
+    if (_customPool && _customPool.active) {
+      const nPit = (_customPool.pitchers || []).length;
+      const nBat = (_customPool.batters || []).length;
+      if (_sport === 'batting') {
+        bannerText.textContent = `Batting stats vs Custom Pool (${nPit} pitcher${nPit !== 1 ? 's' : ''}). ${_data.qualified_count} qualified players (min 10 PA).`;
+      } else {
+        bannerText.textContent = `Pitching stats vs Custom Pool (${nBat} batter${nBat !== 1 ? 's' : ''}). ${_data.qualified_count} qualified pitchers (min 10 BF).`;
+      }
+      bannerLink.style.display = 'none';
     } else {
-      const cutoff = meta.pitcher_cutoff_whip;
-      const cnt = meta.pitcher_count || (_data.qualified_count);
-      bannerText.textContent = `Pitching stats vs HQ batters (top 20% OPS${cutoff ? ', cutoff: ' + cutoff.toFixed(3) : ''}). ${_data.qualified_count} qualified pitchers (min 15 BF).`;
+      const meta = _data.hq_meta || {};
+      if (_sport === 'batting') {
+        const cutoff = meta.batter_cutoff_ops;
+        bannerText.textContent = `Batting stats vs HQ pitchers (top 20% WHIP${cutoff ? ', cutoff: ' + cutoff.toFixed(3) : ''}). ${_data.qualified_count} qualified players (min 15 PA).`;
+      } else {
+        const cutoff = meta.pitcher_cutoff_whip;
+        bannerText.textContent = `Pitching stats vs HQ batters (top 20% OPS${cutoff ? ', cutoff: ' + cutoff.toFixed(3) : ''}). ${_data.qualified_count} qualified pitchers (min 15 BF).`;
+      }
+      bannerLink.style.display = '';
+      bannerLink.href = '/hq-opponents';
     }
   } else {
     banner.style.display = 'none';
+  }
+}
+
+// ── HQ Subnote ────────────────────────────────────────────────────────────
+function updateHQSubnote() {
+  const subnote = document.getElementById('hq-subnote');
+  const subnoteText = document.getElementById('hq-subnote-text');
+  if (_hq) {
+    subnote.style.display = '';
+    if (_customPool && _customPool.active) {
+      const nPit = (_customPool.pitchers || []).length;
+      const nBat = (_customPool.batters || []).length;
+      subnoteText.textContent = `Custom Pool: ${nPit} pitcher${nPit !== 1 ? 's' : ''} selected · ${nBat} batter${nBat !== 1 ? 's' : ''} selected · Session only — resets on tab close`;
+    } else {
+      subnoteText.textContent = 'HQ Pitchers = Manually curated elite pitchers (2025) · HQ Batters = Top 20% of Batters by OPS';
+    }
+  } else {
+    subnote.style.display = 'none';
   }
 }
 
@@ -548,7 +700,24 @@ function setHQ(hq) {
     b.style.opacity = hq ? '0.4' : '';
     b.style.pointerEvents = hq ? 'none' : '';
   });
+  updateCustomPoolUI();
   loadData();
+}
+
+function updateCustomPoolUI() {
+  const pool = _customPool;
+  const btn = document.getElementById('custom-pool-btn');
+  const tabBtn = document.getElementById('hq-tab-btn');
+  const badge = document.getElementById('hq-tab-badge');
+
+  if (pool && pool.active) {
+    const total = (pool.pitchers || []).length + (pool.batters || []).length;
+    btn.textContent = `Edit Pool (${total} player${total !== 1 ? 's' : ''})`;
+    tabBtn.innerHTML = `vs Custom Pool (${total}) <span id="hq-tab-badge" style="background:#d5539b;color:#fff;border-radius:10px;font-size:0.68rem;padding:1px 6px;margin-left:4px;vertical-align:middle;">CUSTOM</span>`;
+  } else {
+    btn.textContent = 'Build Custom Pool';
+    tabBtn.innerHTML = 'vs HQ <span id="hq-tab-badge" style="display:none;background:#d5539b;color:#fff;border-radius:10px;font-size:0.68rem;padding:1px 6px;margin-left:4px;vertical-align:middle;"></span>';
+  }
 }
 
 function setRaw(raw) {
@@ -568,6 +737,7 @@ function onSeasonChange() {
     document.getElementById('team-select').value = '';
     _teamFilter = '';
   }
+  // Re-fetch custom pool with new season if active
   loadData();
 }
 
@@ -636,7 +806,215 @@ function loadHQPool() {
     });
 }
 
+// ── Custom Pool Modal ────────────────────────────────────────────────────
+async function openCustomPoolModal() {
+  const modal = document.getElementById('custom-pool-modal');
+  modal.style.display = 'flex';
+  document.getElementById('modal-error').style.display = 'none';
+
+  // Pre-populate selections from active pool if any
+  if (_customPool && _customPool.active) {
+    _modalPitcherSel = new Set(_customPool.pitchers || []);
+    _modalBatterSel = new Set(_customPool.batters || []);
+  } else if (_modalPitcherSel.size === 0 && _modalBatterSel.size === 0) {
+    // Keep existing selections if modal was opened before
+  }
+
+  if (!_modalLoaded) {
+    await loadModalPlayerLists();
+  } else {
+    renderModalList('pitchers');
+    renderModalList('batters');
+  }
+  switchModalTab('pitchers');
+}
+
+function closeCustomPoolModal() {
+  document.getElementById('custom-pool-modal').style.display = 'none';
+}
+
+async function loadModalPlayerLists() {
+  try {
+    const [pitRes, batRes] = await Promise.all([
+      fetch('/api/players/all-pitchers'),
+      fetch('/api/players/all-batters'),
+    ]);
+    _allPitchers = await pitRes.json();
+    _allBatters = await batRes.json();
+    _modalLoaded = true;
+    renderModalList('pitchers');
+    renderModalList('batters');
+  } catch(e) {
+    document.getElementById('pitcher-list').textContent = 'Error loading players.';
+    document.getElementById('batter-list').textContent = 'Error loading players.';
+  }
+}
+
+function renderModalList(type) {
+  const all = type === 'pitchers' ? _allPitchers : _allBatters;
+  const sel = type === 'pitchers' ? _modalPitcherSel : _modalBatterSel;
+  const listEl = document.getElementById(type === 'pitchers' ? 'pitcher-list' : 'batter-list');
+  const searchEl = document.getElementById(type === 'pitchers' ? 'pitcher-search' : 'batter-search');
+  const query = (searchEl ? searchEl.value : '').toLowerCase().trim();
+
+  const filtered = query ? all.filter(p => p.name.toLowerCase().includes(query)) : all;
+
+  let html = '';
+  filtered.forEach(p => {
+    const checked = sel.has(p.name) || sel.has(p.slug) ? 'checked' : '';
+    const seasons = (p.seasons || []).join(', ');
+    html += `<label style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer;font-family:var(--font-body);font-size:0.85rem;">
+      <input type="checkbox" ${checked} data-name="${p.name}" data-slug="${p.slug}" onchange="toggleModalPlayer('${type}', '${p.name}', this.checked)" style="accent-color:#d5539b;width:15px;height:15px;flex-shrink:0;">
+      <span style="flex:1;">${p.name}</span>
+      <span style="font-size:0.73rem;color:var(--muted);">${seasons}</span>
+    </label>`;
+  });
+
+  if (filtered.length === 0) {
+    html = `<div style="padding:16px;color:var(--muted);text-align:center;font-family:var(--font-body);">No players found.</div>`;
+  }
+  listEl.innerHTML = html;
+  updateModalCounter(type);
+}
+
+function toggleModalPlayer(type, name, checked) {
+  const sel = type === 'pitchers' ? _modalPitcherSel : _modalBatterSel;
+  if (checked) {
+    sel.add(name);
+  } else {
+    sel.delete(name);
+  }
+  updateModalCounter(type);
+}
+
+function updateModalCounter(type) {
+  const sel = type === 'pitchers' ? _modalPitcherSel : _modalBatterSel;
+  const n = sel.size;
+  const label = type === 'pitchers' ? 'pitcher' : 'batter';
+  document.getElementById(type === 'pitchers' ? 'pitcher-count-label' : 'batter-count-label').textContent =
+    `${n} ${label}${n !== 1 ? 's' : ''} selected`;
+}
+
+function filterModalList(type) {
+  renderModalList(type);
+}
+
+function selectAllModal(type) {
+  const all = type === 'pitchers' ? _allPitchers : _allBatters;
+  const sel = type === 'pitchers' ? _modalPitcherSel : _modalBatterSel;
+  const searchEl = document.getElementById(type === 'pitchers' ? 'pitcher-search' : 'batter-search');
+  const query = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  const filtered = query ? all.filter(p => p.name.toLowerCase().includes(query)) : all;
+  filtered.forEach(p => sel.add(p.name));
+  renderModalList(type);
+}
+
+function clearAllModal(type) {
+  const sel = type === 'pitchers' ? _modalPitcherSel : _modalBatterSel;
+  const searchEl = document.getElementById(type === 'pitchers' ? 'pitcher-search' : 'batter-search');
+  const query = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  if (query) {
+    const all = type === 'pitchers' ? _allPitchers : _allBatters;
+    const filtered = all.filter(p => p.name.toLowerCase().includes(query));
+    filtered.forEach(p => sel.delete(p.name));
+  } else {
+    sel.clear();
+  }
+  renderModalList(type);
+}
+
+function switchModalTab(tab) {
+  _modalTab = tab;
+  const pitBtn = document.getElementById('modal-tab-pitchers');
+  const batBtn = document.getElementById('modal-tab-batters');
+  const pitPanel = document.getElementById('modal-panel-pitchers');
+  const batPanel = document.getElementById('modal-panel-batters');
+
+  if (tab === 'pitchers') {
+    pitBtn.style.color = '#d5539b';
+    pitBtn.style.borderBottom = '2px solid #d5539b';
+    batBtn.style.color = 'var(--muted)';
+    batBtn.style.borderBottom = '2px solid transparent';
+    pitPanel.style.display = 'flex';
+    batPanel.style.display = 'none';
+  } else {
+    batBtn.style.color = '#d5539b';
+    batBtn.style.borderBottom = '2px solid #d5539b';
+    pitBtn.style.color = 'var(--muted)';
+    pitBtn.style.borderBottom = '2px solid transparent';
+    batPanel.style.display = 'flex';
+    pitPanel.style.display = 'none';
+  }
+}
+
+function applyCustomPool() {
+  const nPit = _modalPitcherSel.size;
+  const nBat = _modalBatterSel.size;
+  const errEl = document.getElementById('modal-error');
+
+  if (nPit === 0 && nBat === 0) {
+    errEl.textContent = 'Please select at least one pitcher or batter before applying.';
+    errEl.style.display = '';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  const pitchers = Array.from(_modalPitcherSel);
+  const batters = Array.from(_modalBatterSel);
+  const total = nPit + nBat;
+  const label = `Custom Pool (${total} player${total !== 1 ? 's' : ''})`;
+
+  _customPool = { pitchers, batters, label, active: true };
+
+  try {
+    sessionStorage.setItem('customPool', JSON.stringify(_customPool));
+  } catch(e) { /* sessionStorage unavailable */ }
+
+  closeCustomPoolModal();
+  updateCustomPoolUI();
+
+  // Auto-switch to HQ tab if not already there
+  if (!_hq) {
+    setHQ(true);
+  } else {
+    loadData();
+    updateHQSubnote();
+  }
+}
+
+function resetToHQDefaults() {
+  _customPool = null;
+  _modalPitcherSel.clear();
+  _modalBatterSel.clear();
+  try { sessionStorage.removeItem('customPool'); } catch(e) {}
+  closeCustomPoolModal();
+  updateCustomPoolUI();
+  if (_hq) {
+    loadData();
+    updateHQSubnote();
+  }
+}
+
+// Close modal on backdrop click
+document.getElementById('custom-pool-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeCustomPoolModal();
+});
+
 // ── Init ─────────────────────────────────────────────────────────────────
+// Restore custom pool from sessionStorage
+try {
+  const stored = sessionStorage.getItem('customPool');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    if (parsed && parsed.active) {
+      _customPool = parsed;
+      _modalPitcherSel = new Set(parsed.pitchers || []);
+      _modalBatterSel = new Set(parsed.batters || []);
+    }
+  }
+} catch(e) {}
+
+updateCustomPoolUI();
 loadData();
 </script>
 {% endblock %}
